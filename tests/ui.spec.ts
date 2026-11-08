@@ -124,3 +124,27 @@ test('два списка с 10 городами запрещают пустой
   await page.getByRole('button', { name: 'Рассчитать стоимость' }).click();
   await expect(page.getByTestId('total')).toHaveText('1 020 ₽');
 });
+
+test('у городов нет обводки после мыши, но есть при навигации клавиатурой', async ({ page }) => {
+  await page.goto('/');
+  const origin = page.getByRole('combobox', { name: 'Город отправления', exact: true });
+  const destination = page.getByRole('combobox', { name: 'Город назначения', exact: true });
+  for (const [select, city] of [[origin, 'moscow'], [destination, 'kazan']] as const) {
+    await select.click();
+    await select.selectOption(city);
+    await expect(select).toHaveCSS('outline-style', 'none');
+    await page.keyboard.press('Escape');
+  }
+  await page.getByLabel('Высота, см', { exact: true }).focus();
+  await page.keyboard.press('Tab');
+  await expect(origin).toBeFocused();
+  await expect(origin).toHaveCSS('outline-style', 'solid');
+  await expect(origin).toHaveCSS('outline-width', '3px');
+  await page.keyboard.press('Tab');
+  await expect(destination).toBeFocused();
+  await expect(destination).toHaveCSS('outline-style', 'solid');
+  await expect(destination).toHaveCSS('outline-width', '3px');
+  await page.keyboard.press('ArrowDown');
+  await expect(destination).toBeFocused();
+  await expect(destination).toHaveCSS('outline-style', 'solid');
+});

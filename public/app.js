@@ -52,6 +52,12 @@ function formChanged() {
 form.addEventListener('input', formChanged);
 form.addEventListener('change', formChanged);
 
+for (const select of form.querySelectorAll('select')) {
+  select.addEventListener('pointerdown', () => select.classList.add('pointer-focus'));
+  select.addEventListener('keydown', () => select.classList.remove('pointer-focus'));
+  select.addEventListener('blur', () => select.classList.remove('pointer-focus'));
+}
+
 function renderRows(id, rows) {
   const list = document.getElementById(id);
   list.replaceChildren();
