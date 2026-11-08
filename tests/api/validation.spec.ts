@@ -1,11 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { expectErrors, expectQuote, parcel } from './support.ts';
+import { reportScenario } from '../report.ts';
+import { fieldNames, expectErrors, expectQuote, parcel } from './support.ts';
 
 for (const field of Object.keys(parcel)) {
-  test(`API-01: обязательное поле ${field} отсутствует`, async ({ request }) => {
-    const data: Record<string, unknown> = { ...parcel };
-    delete data[field];
-    await expectErrors(await request.post('/api/quote', { data }), 400, [field]);
+  test(`Без обязательного поля «${fieldNames[field]}» расчёт отклоняется`, async ({ request }) => {
+    await reportScenario('Проверка данных посылки', 'Обязательные поля');
+
+    await test.step(`Без обязательного поля «${fieldNames[field]}» расчёт отклоняется`, async () => {
+      const data: Record<string, unknown> = { ...parcel };
+      delete data[field];
+      await expectErrors(await request.post('/api/quote', { data }), 400, [field]);
+    });
   });
 }
 
@@ -18,9 +23,11 @@ const invalidTypes: Array<[string, unknown[]]> = [
   ['fragile', [null, 'false', 0, {}, []]],
 ];
 for (const [field, values] of invalidTypes) {
-  test(`API-05/06: неверные типы и значения ${field} не исправляются`, async ({ request }) => {
+  test(`Неверные значения поля «${fieldNames[field]}» отклоняются без автоматического исправления`, async ({ request }) => {
+    await reportScenario('Проверка данных посылки', 'Типы данных и допустимые значения');
+
     for (const value of values) {
-      await test.step(JSON.stringify(value), async () => {
+      await test.step(`Передать в поле «${fieldNames[field]}» значение ${JSON.stringify(value)} и получить ошибку`, async () => {
         await expectErrors(await request.post('/api/quote', {
           data: { ...parcel, [field]: value },
         }), 400, [field]);
@@ -30,10 +37,14 @@ for (const [field, values] of invalidTypes) {
 }
 
 for (const weightKg of [0, 0.09, 30.01, 1.251, 1.00000000001, 1.00999999999]) {
-  test(`API-02/03: недопустимый вес ${weightKg}`, async ({ request }) => {
-    await expectErrors(await request.post('/api/quote', {
-      data: { ...parcel, weightKg },
-    }), 400, ['weightKg']);
+  test(`Вес ${weightKg} кг вне допустимого диапазона или точности отклоняется`, async ({ request }) => {
+    await reportScenario('Проверка данных посылки', 'Границы и точность веса');
+
+    await test.step(`Вес ${weightKg} кг вне допустимого диапазона или точности отклоняется`, async () => {
+      await expectErrors(await request.post('/api/quote', {
+        data: { ...parcel, weightKg },
+      }), 400, ['weightKg']);
+    });
   });
 }
 
@@ -41,18 +52,24 @@ for (const [weightKg, billedWeightKg, totalRub] of [
   [0.1, 1, 850], [0.11, 1, 850], [0.29, 1, 850],
   [1.25, 2, 900], [29.99, 30, 2300], [30, 30, 2300],
 ] as const) {
-  test(`API-02/03: допустимый вес ${weightKg}`, async ({ request }) => {
-    const body = await expectQuote(await request.post('/api/quote', { data: { ...parcel, weightKg } }));
-    expect(body.actualWeightKg).toBe(weightKg);
-    expect(body.billedWeightKg).toBe(billedWeightKg);
-    expect(body.totalRub).toBe(totalRub);
+  test(`Допустимый вес ${weightKg} кг принимается, цена составляет ${totalRub} ₽`, async ({ request }) => {
+    await reportScenario('Проверка данных посылки', 'Границы и точность веса');
+
+    await test.step(`Допустимый вес ${weightKg} кг принимается, цена составляет ${totalRub} ₽`, async () => {
+      const body = await expectQuote(await request.post('/api/quote', { data: { ...parcel, weightKg } }));
+      expect(body.actualWeightKg).toBe(weightKg);
+      expect(body.billedWeightKg).toBe(billedWeightKg);
+      expect(body.totalRub).toBe(totalRub);
+    });
   });
 }
 
 for (const field of ['lengthCm', 'widthCm', 'heightCm']) {
-  test(`API-04: допустимые границы ${field}`, async ({ request }) => {
+  test(`Поле «${fieldNames[field]}» принимает граничные размеры от 1 до 100 см`, async ({ request }) => {
+    await reportScenario('Проверка данных посылки', 'Границы габаритов');
+
     for (const value of [1, 2, 99, 100]) {
-      await test.step(String(value), async () => {
+      await test.step(`Передать размер ${value} см и проверить результат`, async () => {
         const body = await expectQuote(await request.post('/api/quote', {
           data: { ...parcel, [field]: value },
         }));
@@ -61,9 +78,11 @@ for (const field of ['lengthCm', 'widthCm', 'heightCm']) {
     }
   });
 
-  test(`API-04: внешние границы и дробь ${field}`, async ({ request }) => {
+  test(`Поле «${fieldNames[field]}» отклоняет размеры вне диапазона и дробные сантиметры`, async ({ request }) => {
+    await reportScenario('Проверка данных посылки', 'Границы габаритов');
+
     for (const value of [-1, 0, 101, 1.5]) {
-      await test.step(String(value), async () => {
+      await test.step(`Передать размер ${value} см и проверить результат`, async () => {
         await expectErrors(await request.post('/api/quote', {
           data: { ...parcel, [field]: value },
         }), 400, [field]);
@@ -73,50 +92,78 @@ for (const field of ['lengthCm', 'widthCm', 'heightCm']) {
 }
 
 for (const field of ['extraField', 'distanceKm']) {
-  test(`API-06: неизвестное поле ${field}`, async ({ request }) => {
-    await expectErrors(await request.post('/api/quote', {
-      data: { ...parcel, [field]: 1 },
-    }), 400, [field]);
+  test(`Лишнее поле «${fieldNames[field]}» отклоняется`, async ({ request }) => {
+    await reportScenario('Проверка данных посылки', 'Запрет лишних полей и ручного расстояния');
+
+    await test.step(`Лишнее поле «${fieldNames[field]}» отклоняется`, async () => {
+      await expectErrors(await request.post('/api/quote', {
+        data: { ...parcel, [field]: 1 },
+      }), 400, [field]);
+    });
   });
 }
 
-test('API-08: несколько ошибок, без требования к порядку', async ({ request }) => {
-  await expectErrors(await request.post('/api/quote', {
-    data: { ...parcel, weightKg: '2', destinationCity: 'unknown', extraField: true },
-  }), 400, ['weightKg', 'destinationCity', 'extraField']);
+test('Несколько ошибок запроса возвращаются вместе независимо от порядка', async ({ request }) => {
+  await reportScenario('Проверка данных посылки', 'Все ошибки одного запроса');
+
+  await test.step('Несколько ошибок запроса возвращаются вместе независимо от порядка', async () => {
+    await expectErrors(await request.post('/api/quote', {
+      data: { ...parcel, weightKg: '2', destinationCity: 'unknown', extraField: true },
+    }), 400, ['weightKg', 'destinationCity', 'extraField']);
+  });
 });
 
 for (const data of ['null', '[]', '42', 'false', '"посылка"', '{', '']) {
-  test(`API-08/09: неверное тело ${JSON.stringify(data)}`, async ({ request }) => {
-    await expectErrors(await request.post('/api/quote', {
-      headers: { 'Content-Type': 'application/json' }, data,
-    }), 400, [null]);
+  test(`Некорректное содержимое запроса ${JSON.stringify(data)} отклоняется`, async ({ request }) => {
+    await reportScenario('Обмен данными с сервисом', 'Некорректное содержимое запроса');
+
+    await test.step(`Некорректное содержимое запроса ${JSON.stringify(data)} отклоняется`, async () => {
+      await expectErrors(await request.post('/api/quote', {
+        headers: { 'Content-Type': 'application/json' }, data,
+      }), 400, [null]);
+    });
   });
 }
 
 for (const contentType of ['text/plain', 'application/xml']) {
-  test(`API-09: Content-Type ${contentType} не поддерживается`, async ({ request }) => {
-    await expectErrors(await request.post('/api/quote', {
-      headers: { 'Content-Type': contentType }, data: JSON.stringify(parcel),
-    }), 415, [null]);
+  test(`Формат ${contentType} отклоняется: сервис принимает только JSON`, async ({ request }) => {
+    await reportScenario('Обмен данными с сервисом', 'Поддерживаемый формат JSON');
+
+    await test.step(`Формат ${contentType} отклоняется: сервис принимает только JSON`, async () => {
+      await expectErrors(await request.post('/api/quote', {
+        headers: { 'Content-Type': contentType }, data: JSON.stringify(parcel),
+      }), 415, [null]);
+    });
   });
 }
 
-test('API-09: Content-Type отсутствует', async ({ request }) => {
-  await expectErrors(await request.post('/api/quote'), 415, [null]);
+test('Запрос без указания формата данных отклоняется', async ({ request }) => {
+  await reportScenario('Обмен данными с сервисом', 'Поддерживаемый формат JSON');
+
+  await test.step('Запрос без указания формата данных отклоняется', async () => {
+    await expectErrors(await request.post('/api/quote'), 415, [null]);
+  });
 });
 
-test('API-03/09: JSON с charset, пробелами и весом 1.250 принимается', async ({ request }) => {
-  const data = JSON.stringify(parcel, null, 2).replace('"weightKg": 2', '"weightKg": 1.250');
-  const body = await expectQuote(await request.post('/api/quote', {
-    headers: { 'Content-Type': 'application/json; charset=utf-8' }, data,
-  }));
-  expect(body.actualWeightKg).toBe(1.25);
-  expect(body.totalRub).toBe(900);
+test('JSON с указанием кодировки, пробелами и весом 1.250 принимается', async ({ request }) => {
+  await reportScenario('Обмен данными с сервисом', 'Поддерживаемый формат JSON');
+
+  await test.step('JSON с указанием кодировки, пробелами и весом 1.250 принимается', async () => {
+    const data = JSON.stringify(parcel, null, 2).replace('"weightKg": 2', '"weightKg": 1.250');
+    const body = await expectQuote(await request.post('/api/quote', {
+      headers: { 'Content-Type': 'application/json; charset=utf-8' }, data,
+    }));
+    expect(body.actualWeightKg).toBe(1.25);
+    expect(body.totalRub).toBe(900);
+  });
 });
 
-test('API-10: слишком большое JSON-тело возвращает 413', async ({ request }) => {
-  await expectErrors(await request.post('/api/quote', {
-    data: { ...parcel, padding: 'x'.repeat(2 * 1024 * 1024) },
-  }), 413, [null]);
+test('Запрос больше 1 МБ отклоняется с сообщением о превышении размера', async ({ request }) => {
+  await reportScenario('Обмен данными с сервисом', 'Ограничение размера запроса');
+
+  await test.step('Запрос больше 1 МБ отклоняется с сообщением о превышении размера', async () => {
+    await expectErrors(await request.post('/api/quote', {
+      data: { ...parcel, padding: 'x'.repeat(2 * 1024 * 1024) },
+    }), 413, [null]);
+  });
 });

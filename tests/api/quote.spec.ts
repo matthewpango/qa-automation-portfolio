@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { reportScenario } from '../report.ts';
 import { cities, expectErrors, expectQuote, parcel } from './support.ts';
 
 for (const [deliveryType, fragile, multiplier, express, surcharge, total] of [
@@ -7,18 +8,22 @@ for (const [deliveryType, fragile, multiplier, express, surcharge, total] of [
   ['express', false, 1.5, 450, 0, 1350],
   ['express', true, 1.5, 450, 100, 1450],
 ] as const) {
-  test(`CALC-04: ${deliveryType}, хрупкость ${fragile}: ${total} ₽`, async ({ request }) => {
-    const body = await expectQuote(await request.post('/api/quote', {
-      data: { ...parcel, deliveryType, fragile },
-    }));
-    expect(body).toEqual({
-      actualWeightKg: 2, volumetricWeightKg: 0.2, chargeableWeightKg: 2,
-      billedWeightKg: 2, distanceBlocks: 70, baseCostRub: 100,
-      weightCostRub: 100, distanceCostRub: 700, subtotalRub: 900,
-      deliveryMultiplier: multiplier, expressSurchargeRub: express, fragileSurchargeRub: surcharge,
-      totalRub: total, currency: 'RUB', distanceKm: 700,
-      originCity: 'moscow', destinationCity: 'saint-petersburg',
-      originCityName: 'Москва', destinationCityName: 'Санкт-Петербург',
+  test(`${deliveryType === 'standard' ? 'Обычная' : 'Экспресс'} доставка ${fragile ? 'с хрупким грузом' : 'без хрупкого груза'} стоит ${total} ₽`, async ({ request }) => {
+    await reportScenario('Расчёт стоимости', 'Доплаты за экспресс и хрупкий груз');
+
+    await test.step(`${deliveryType === 'standard' ? 'Обычная' : 'Экспресс'} доставка ${fragile ? 'с хрупким грузом' : 'без хрупкого груза'} стоит ${total} ₽`, async () => {
+      const body = await expectQuote(await request.post('/api/quote', {
+        data: { ...parcel, deliveryType, fragile },
+      }));
+      expect(body).toEqual({
+        actualWeightKg: 2, volumetricWeightKg: 0.2, chargeableWeightKg: 2,
+        billedWeightKg: 2, distanceBlocks: 70, baseCostRub: 100,
+        weightCostRub: 100, distanceCostRub: 700, subtotalRub: 900,
+        deliveryMultiplier: multiplier, expressSurchargeRub: express, fragileSurchargeRub: surcharge,
+        totalRub: total, currency: 'RUB', distanceKm: 700,
+        originCity: 'moscow', destinationCity: 'saint-petersburg',
+        originCityName: 'Москва', destinationCityName: 'Санкт-Петербург',
+      });
     });
   });
 }
@@ -31,23 +36,29 @@ for (const [weightKg, lengthCm, widthCm, heightCm, volume, chargeable, billed, t
   [0.1, 41, 61, 2, 1.0004, 1.0004, 2, 900],
   [30, 100, 100, 100, 200, 200, 200, 10800],
 ] as const) {
-  test(`CALC-01/02/03: ${weightKg} кг, ${lengthCm}×${widthCm}×${heightCm} см`, async ({ request }) => {
-    const body = await expectQuote(await request.post('/api/quote', {
-      data: { ...parcel, weightKg, lengthCm, widthCm, heightCm },
-    }));
-    expect(body.actualWeightKg).toBe(weightKg);
-    expect(body.volumetricWeightKg).toBe(volume);
-    expect(body.chargeableWeightKg).toBe(chargeable);
-    expect(body.billedWeightKg).toBe(billed);
-    expect(body.totalRub).toBe(total);
+  test(`Вес ${weightKg} кг и размеры ${lengthCm} × ${widthCm} × ${heightCm} см дают цену ${total} ₽`, async ({ request }) => {
+    await reportScenario('Расчёт стоимости', 'Выбор и округление оплачиваемого веса');
+
+    await test.step(`Вес ${weightKg} кг и размеры ${lengthCm} × ${widthCm} × ${heightCm} см дают цену ${total} ₽`, async () => {
+      const body = await expectQuote(await request.post('/api/quote', {
+        data: { ...parcel, weightKg, lengthCm, widthCm, heightCm },
+      }));
+      expect(body.actualWeightKg).toBe(weightKg);
+      expect(body.volumetricWeightKg).toBe(volume);
+      expect(body.chargeableWeightKg).toBe(chargeable);
+      expect(body.billedWeightKg).toBe(billed);
+      expect(body.totalRub).toBe(total);
+    });
   });
 }
 
-test('ROUTE-01/02: все 90 направлений доступны, обратные маршруты симметричны', async ({ request }) => {
+test('Все 90 междугородних направлений доступны, цена и расстояние одинаковы в обе стороны', async ({ request }) => {
+  await reportScenario('Междугородние маршруты', 'Доступность и симметрия всех направлений');
+
   const results = new Map<string, { distance: number; price: number }>();
   for (const [originCity, originCityName] of cities) {
     for (const [destinationCity, destinationCityName] of cities.filter(([city]) => city !== originCity)) {
-      await test.step(`${originCityName} → ${destinationCityName}`, async () => {
+      await test.step(`Рассчитать ${originCityName} → ${destinationCityName}: проверить города, расстояние и стоимость`, async () => {
         const body = await expectQuote(await request.post('/api/quote', {
           data: { ...parcel, originCity, destinationCity },
         }));
@@ -61,13 +72,17 @@ test('ROUTE-01/02: все 90 направлений доступны, обрат
     }
   }
 
-  expect(results.size).toBe(90);
-  for (const [key, result] of results) expect(results.get(key.split(':').reverse().join(':'))).toEqual(result);
+  await test.step('Проверить все 90 результатов: прямой и обратный маршруты имеют одинаковые цену и расстояние', async () => {
+    expect(results.size).toBe(90);
+    for (const [key, result] of results) expect(results.get(key.split(':').reverse().join(':'))).toEqual(result);
+  });
 });
 
-test('ROUTE-03: перевозки внутри каждого из десяти городов запрещены', async ({ request }) => {
+test('Доставка внутри каждого из десяти городов запрещена', async ({ request }) => {
+  await reportScenario('Междугородние маршруты', 'Запрет доставки внутри города');
+
   for (const [city, name] of cities) {
-    await test.step(name, async () => {
+    await test.step(`Запросить доставку внутри города ${name}: получить отказ`, async () => {
       await expectErrors(await request.post('/api/quote', {
         data: { ...parcel, originCity: city, destinationCity: city },
       }), 400, ['destinationCity']);
@@ -75,18 +90,26 @@ test('ROUTE-03: перевозки внутри каждого из десяти
   }
 });
 
-test('ROUTE-04: смена города меняет расстояние и цену по фиксированному эталону', async ({ request }) => {
-  const body = await expectQuote(await request.post('/api/quote', {
-    data: { ...parcel, destinationCity: 'kazan' },
-  }));
-  expect(body.distanceKm).toBe(820);
-  expect(body.distanceBlocks).toBe(82);
-  expect(body.distanceCostRub).toBe(820);
-  expect(body.totalRub).toBe(1020);
+test('Доставка Москва → Казань: 820 км и стоимость 1 020 ₽', async ({ request }) => {
+  await reportScenario('Междугородние маршруты', 'Цена выбранного маршрута');
+
+  await test.step('Доставка Москва → Казань: 820 км и стоимость 1 020 ₽', async () => {
+    const body = await expectQuote(await request.post('/api/quote', {
+      data: { ...parcel, destinationCity: 'kazan' },
+    }));
+    expect(body.distanceKm).toBe(820);
+    expect(body.distanceBlocks).toBe(82);
+    expect(body.distanceCostRub).toBe(820);
+    expect(body.totalRub).toBe(1020);
+  });
 });
 
-test('одинаковый запрос воспроизводит одинаковый результат', async ({ request }) => {
-  const first = await expectQuote(await request.post('/api/quote', { data: parcel }));
-  const second = await expectQuote(await request.post('/api/quote', { data: parcel }));
-  expect(second).toEqual(first);
+test('Повторный расчёт одной посылки возвращает тот же результат', async ({ request }) => {
+  await reportScenario('Расчёт стоимости', 'Воспроизводимый результат');
+
+  await test.step('Повторный расчёт одной посылки возвращает тот же результат', async () => {
+    const first = await expectQuote(await request.post('/api/quote', { data: parcel }));
+    const second = await expectQuote(await request.post('/api/quote', { data: parcel }));
+    expect(second).toEqual(first);
+  });
 });

@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: [
     ['list'],
     ['html', { open: 'never' }],
-    ['allure-playwright', { resultsDir: 'allure/results' }],
+    ['allure-playwright', { resultsDir: 'allure/results', detail: false, suiteTitle: false }],
   ],
   use: {
     baseURL,
