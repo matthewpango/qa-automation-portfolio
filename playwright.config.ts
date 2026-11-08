@@ -1,16 +1,21 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = process.env.BASE_URL ?? 'http://127.0.0.1:3100';
+
 export default defineConfig({
   testDir: './tests',
-  testMatch: '**/ui.spec.ts',
   fullyParallel: true,
+  workers: 4,
   reporter: 'list',
   use: {
-    baseURL: 'http://127.0.0.1:3100',
+    baseURL,
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
+  projects: [
+    { name: 'api', testMatch: '**/api/*.spec.ts' },
+    { name: 'chromium', testMatch: '**/ui.spec.ts', use: { ...devices['Desktop Chrome'] } },
+  ],
+  webServer: process.env.BASE_URL ? undefined : {
     command: 'npm start',
     url: 'http://127.0.0.1:3100',
     env: { HOST: '127.0.0.1', PORT: '3100' },

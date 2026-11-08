@@ -20,7 +20,9 @@ const fieldMessages: Record<string, string> = {
 };
 
 export function buildApp(): FastifyInstance {
+  const bodyLimit = 1024 * 1024;
   const app = Fastify({
+    bodyLimit,
     ajv: {
       customOptions: { coerceTypes: false, removeAdditional: false, allErrors: true },
       plugins: [(ajv) => {
@@ -61,6 +63,10 @@ export function buildApp(): FastifyInstance {
       if (contentType !== 'application/json') {
         return reply.code(415).send({ errors: [{ field: null,
           message: 'Используйте Content-Type: application/json.' }] });
+      }
+      // Отказываем до парсера, чтобы клиент получил 413 при продолжающейся загрузке.
+      if (Number(request.headers['content-length']) > bodyLimit) {
+        return reply.code(413).send({ errors: [{ field: null, message: 'Тело запроса слишком большое.' }] });
       }
     },
     schema: { body: {
