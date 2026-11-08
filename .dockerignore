@@ -7,5 +7,6 @@
 !public/**
 !tsconfig.json
 !playwright.config.ts
+!allurerc.mjs
 !tests/
 !tests/**

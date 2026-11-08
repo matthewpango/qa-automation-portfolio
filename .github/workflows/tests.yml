@@ -32,7 +32,7 @@ jobs:
 
       - name: Build test container
         run: |
-          mkdir -p artifacts
+          mkdir -p artifacts allure
           docker compose --profile test build tests 2>&1 | tee artifacts/tests-build.log
 
       - name: Check types, unit and internal integration tests in container
@@ -42,9 +42,17 @@ jobs:
         if: env.FULL_SUITE == 'true'
         run: docker compose up --build -d --wait --wait-timeout 90 2>&1 | tee artifacts/docker-build.log
 
+      - name: Restore Allure history
+        if: env.FULL_SUITE == 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: allure/history.jsonl
+          key: allure-history-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: allure-history-${{ github.ref }}-
+
       - name: Run API and UI tests in container
         if: env.FULL_SUITE == 'true'
-        run: docker compose --profile test run --rm tests npx playwright test 2>&1 | tee artifacts/playwright.log
+        run: docker compose --profile test run --rm tests npm run test:playwright 2>&1 | tee artifacts/playwright.log
 
       - name: Collect container diagnostics
         if: ${{ !cancelled() && env.FULL_SUITE == 'true' }}
@@ -62,8 +70,16 @@ jobs:
             artifacts/
             playwright-report/
             test-results/
+            allure/
           retention-days: 14
           if-no-files-found: warn
+
+      - name: Save Allure history
+        if: ${{ !cancelled() && env.FULL_SUITE == 'true' && hashFiles('allure/history.jsonl') != '' }}
+        uses: actions/cache/save@v5
+        with:
+          path: allure/history.jsonl
+          key: allure-history-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Stop test environment
         if: always()

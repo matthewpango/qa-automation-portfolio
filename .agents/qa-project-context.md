@@ -28,7 +28,7 @@ Requirements: README.md and docs/superpowers/specs/2026-11-09-intercity-routes.m
 - Playwright 1.65.0 installed: tests/api/*.spec.ts (63 HTTP API cases), tests/ui.spec.ts (11 browser cases), playwright.config.ts.
 - Projects: api (request fixture, no browser) and chromium (UI). BASE_URL selects an existing server; otherwise Playwright starts Node on port 3100.
 - npm test passed 2026-11-09 locally and against Docker: 6 unit, 2 internal integration, 63 HTTP API, 11 UI tests; total 82.
-- Reporters: list + HTML (playwright-report/). Trace and screenshot retained on failure. Failure exit code and artifacts verified with deliberate faults in an isolated copy. HTTP suite verified against Docker at http://127.0.0.1:3000.
+- Reporters: list + HTML (playwright-report/) + allure-playwright 3.14.0 with Allure 3.33.0. Trace and screenshot retained on failure. Failure exit code and artifacts verified with deliberate faults in an isolated copy. HTTP suite verified against Docker at http://127.0.0.1:3000.
 - TypeScript 7.0.2 installed; typecheck is tsc --noEmit.
 - Linux compatibility: all 82 checks passed in isolated Linux with Node24.22.2 and Playwright1.65.0 against the Docker app. This does not establish a real GitHub Actions run.
 
@@ -40,7 +40,7 @@ Workflow .github/workflows/tests.yml exists and passes actionlint locally. All a
 
 - Local Docker demo: http://127.0.0.1:3000.
 - Primary test command: docker compose --profile test run --build --rm tests. Internal app URL: http://web:3000; depends_on requires healthy app.
-- Reports bind-mounted to host playwright-report/ and test-results/. Container exit=1 and host HTML/trace/screenshot verified with a deliberately failing test. Container report viewer verified on host port 9323.
+- Reports bind-mounted to host playwright-report/, test-results/ and allure/. Allure covers 74 Playwright tests; eight node:test checks remain in logs. Allure run generates reports even on failure and preserves exit code. History: allure/history.jsonl, CI cache per ref. Two genuine full runs and an isolated failure verified; viewer on port 8080 verified in container Chromium. Container exit=1 and host HTML/trace/screenshot verified with a deliberately failing test. Container report viewer verified on host port 9323.
 - Automated tests, including focused/debug runs, must execute through the tests container. No native test execution is part of the supported workflow.
 - Production and staging: none established. No deployment service identified.
 - Network failures/delays are controlled with browser routes; normal quotes use real API.
