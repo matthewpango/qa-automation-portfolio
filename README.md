@@ -194,11 +194,30 @@ Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:3000/api/quote' `
 [матрицу покрытия](docs/qa-coverage-matrix.md).
 
 ```sh
-npm run check
-npx playwright install chromium
-npm run test:api
-npm run test:ui
+docker compose --profile test run --build --rm tests
 ```
+
+Это основной способ запуска локально и в CI. Сервис `tests` содержит Node.js 24,
+Playwright 1.65.0 и Chromium; Node.js и браузер на хосте не нужны.
+Compose ожидает healthy у `app`, затем запускает в тестовом контейнере
+TypeScript, unit, внутренние интеграционные, API- и UI-тесты.
+Контейнеры общаются по `http://web:3000` во внутренней сети.
+После завершения контейнер тестов удаляется, приложение продолжает работать.
+Ненулевой exit code тестов передаётся вызывающей команде.
+
+Только API или только UI, тоже в контейнере:
+
+```sh
+docker compose --profile test run --build --rm tests npm run test:api
+docker compose --profile test run --build --rm tests npm run test:ui
+```
+
+Исходники и зависимости входят в образ `Dockerfile.tests`; после их изменения
+используйте `--build`. Версия базового Playwright-образа должна совпадать
+с версией `@playwright/test` в lockfile. Отчёты монтируются на хост в
+`playwright-report/` и `test-results/`, поэтому переживают удаление контейнера.
+
+Команды npm выполняются внутри тестового контейнера:
 
 - `npm run typecheck`: строгая проверка TypeScript.
 - `npm run test:unit`: формула и таблица маршрутов через node:test.
@@ -210,24 +229,9 @@ npm run test:ui
 - `npm test`: все перечисленные проверки.
 
 В одной конфигурации Playwright два проекта: `api` и `chromium`.
-Без `BASE_URL` раннер автоматически запускает отдельный Node-сервер на порту 3100
-и останавливает его после тестов. API-набор не требует установленного Chromium.
-
-### API-тесты против Docker
-
-```powershell
-docker compose up --build -d --wait
-$env:BASE_URL = 'http://127.0.0.1:3000'
-npm run test:api
-```
-
-При заданном `BASE_URL` автоматический сервер не запускается: тестируется
-сервис по указанному адресу. Эта настройка работает и для `npm run test:ui`,
-и для полного `npm test`. Для возврата к автоматическому локальному запуску:
-
-```powershell
-Remove-Item Env:BASE_URL
-```
+В Compose `BASE_URL` уже задан для контейнерной сети, поэтому раннер использует
+готовое приложение и не запускает дополнительный сервер. Вручную выставлять
+переменные на хосте не нужно. Все команды автотестов выполняйте через сервис `tests`.
 
 API-набор находится в `tests/api/`: четыре сочетания доплат, точность и границы
 веса/габаритов, 90 направлений, запрет всех 10 внутригородских маршрутов,
@@ -244,7 +248,7 @@ Smoke-набор проверяет реальный расчёт, ошибки,
 Для сбоев сети используются перехваты Playwright.
 Трейс сохраняется при неудаче в `test-results/`.
 
-API-набор работает через настоящий HTTP, включая запуск против Docker.
+API-набор работает через настоящий HTTP между контейнерами.
 Кроссбраузерность и нагрузочные тесты остаются отдельными этапами.
 Используются list- и HTML-репортёры. Скриншоты и trace
 сохраняются при неудаче. Allure не добавлен.
@@ -254,8 +258,11 @@ API-набор работает через настоящий HTTP, включа
 После запуска Playwright HTML-отчёт находится в `playwright-report/`:
 
 ```sh
-npx playwright show-report
+docker compose --profile test run --rm --no-deps -p 127.0.0.1:9323:9323 tests npx playwright show-report --host 0.0.0.0
 ```
+
+Отчёт доступен по http://127.0.0.1:9323. После просмотра остановите сервер
+через Ctrl+C.
 
 Workflow: `.github/workflows/tests.yml`, job `tests`.
 
@@ -266,8 +273,10 @@ Workflow: `.github/workflows/tests.yml`, job `tests`.
 | Push в основную ветку | Полный набор, включая Docker |
 | Ручной workflow_dispatch | Полный набор, включая Docker |
 
-Сервис в CI запускается через Compose и ожидается в состоянии healthy.
-Playwright проверяет именно этот контейнер через `BASE_URL`.
+И приложение, и автотесты в CI запускаются через Compose.
+В runner не устанавливаются Node.js, npm-зависимости и Chromium для запуска тестов:
+они находятся в тестовом образе. Быстрые проверки идут в `tests` без приложения,
+полный набор ожидает healthy у `app` и проверяет его по контейнерному адресу.
 При ошибке сохраняются доступные `artifacts/`, `playwright-report/` и `test-results/`:
 логи проверок и контейнера, HTML-отчёт, traces и скриншоты отказов.
 Срок хранения артефактов: 14 дней. Окружение останавливается в завершающем шаге,

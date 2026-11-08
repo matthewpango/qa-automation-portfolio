@@ -5,3 +5,7 @@
 !src/**
 !public/
 !public/**
+!tsconfig.json
+!playwright.config.ts
+!tests/
+!tests/**

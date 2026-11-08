@@ -3,3 +3,23 @@ services:
     build: .
     ports:
       - "127.0.0.1:3000:3000"
+    networks:
+      default:
+        aliases:
+          - web
+
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
+    profiles: [test]
+    init: true
+    shm_size: 1gb
+    environment:
+      BASE_URL: http://web:3000
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./playwright-report:/app/playwright-report
+      - ./test-results:/app/test-results

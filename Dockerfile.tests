@@ -1,0 +1,16 @@
+FROM node:24-bookworm-slim AS node-runtime
+FROM mcr.microsoft.com/playwright:v1.65.0-noble
+
+COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node
+WORKDIR /app
+ENV CI=true BASE_URL=http://web:3000
+
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund && npm cache clean --force
+
+COPY tsconfig.json playwright.config.ts ./
+COPY src ./src
+COPY public ./public
+COPY tests ./tests
+
+CMD ["npm", "test"]

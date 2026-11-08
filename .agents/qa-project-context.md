@@ -17,7 +17,7 @@ Requirements: README.md and docs/superpowers/specs/2026-11-09-intercity-routes.m
 - Backend: Node.js 24+, TypeScript, REST/JSON, Fastify 5.12.8 installed.
 - Frontend: native HTML/CSS/JavaScript in public/, served by the same app.
 - Storage: none; cities/distances and tariffs are local JSON configuration.
-- Runtime: Dockerfile and compose.yaml, non-root node user, local port 3000.
+- Runtime: Dockerfile and compose.yaml, non-root app user, local port 3000. Dockerfile.tests supplies Node24, Playwright1.65.0 and Chromium for the tests service.
 - No external business APIs, accounts, credentials, database or monorepo.
 - Version evidence: installed package metadata, package.json and package-lock.json.
 
@@ -34,12 +34,14 @@ Requirements: README.md and docs/superpowers/specs/2026-11-09-intercity-routes.m
 
 ## CI/CD
 
-Workflow .github/workflows/tests.yml exists and passes actionlint locally. Branch pushes run workflow lint + type/unit/internal integration checks; PR, default-branch push and manual runs also build Docker and run API/UI. Artifacts retained 14 days; cleanup runs always. No retries or sharding. GitHub execution and required status checks are NOT verified: repository has no remote.
+Workflow .github/workflows/tests.yml exists and passes actionlint locally. All automated checks run INSIDE the tests Compose service, never directly on the runner. No setup-node, npm ci or browser install on the host; build and run Dockerfile.tests instead. Branch pushes run workflow lint + type/unit/internal integration checks; PR, default-branch push and manual runs also build Docker and run API/UI. Artifacts retained 14 days; cleanup runs always. No retries or sharding. GitHub execution and required status checks are NOT verified: repository has no remote.
 
 ## Environments
 
 - Local Docker demo: http://127.0.0.1:3000.
-- Local Playwright-managed server: http://127.0.0.1:3100. Both API and UI can target Docker via BASE_URL.
+- Primary test command: docker compose --profile test run --build --rm tests. Internal app URL: http://web:3000; depends_on requires healthy app.
+- Reports bind-mounted to host playwright-report/ and test-results/. Container exit=1 and host HTML/trace/screenshot verified with a deliberately failing test. Container report viewer verified on host port 9323.
+- Automated tests, including focused/debug runs, must execute through the tests container. No native test execution is part of the supported workflow.
 - Production and staging: none established. No deployment service identified.
 - Network failures/delays are controlled with browser routes; normal quotes use real API.
 

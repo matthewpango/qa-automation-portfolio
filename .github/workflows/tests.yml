@@ -21,40 +21,30 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      BASE_URL: http://127.0.0.1:3000
       FULL_SUITE: ${{ github.event_name != 'push' || github.ref_name == github.event.repository.default_branch }}
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: npm
-
       - name: Validate workflow
         run: docker run --rm -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.11 -color
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Check types, unit and internal integration tests
+      - name: Build test container
         run: |
           mkdir -p artifacts
-          npm run check 2>&1 | tee artifacts/check.log
+          docker compose --profile test build tests 2>&1 | tee artifacts/tests-build.log
 
-      - name: Install Chromium
-        if: env.FULL_SUITE == 'true'
-        run: npx playwright install --with-deps chromium
+      - name: Check types, unit and internal integration tests in container
+        run: docker compose --profile test run --rm --no-deps tests npm run check 2>&1 | tee artifacts/check.log
 
       - name: Build and start application
         if: env.FULL_SUITE == 'true'
         run: docker compose up --build -d --wait --wait-timeout 90 2>&1 | tee artifacts/docker-build.log
 
-      - name: Run API and UI tests against Docker
+      - name: Run API and UI tests in container
         if: env.FULL_SUITE == 'true'
-        run: npx playwright test 2>&1 | tee artifacts/playwright.log
+        run: docker compose --profile test run --rm tests npx playwright test 2>&1 | tee artifacts/playwright.log
 
       - name: Collect container diagnostics
         if: ${{ !cancelled() && env.FULL_SUITE == 'true' }}
@@ -77,4 +67,4 @@ jobs:
 
       - name: Stop test environment
         if: always()
-        run: docker compose down --remove-orphans
+        run: docker compose --profile test down --remove-orphans
