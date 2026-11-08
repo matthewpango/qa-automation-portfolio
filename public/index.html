@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Рассчитайте стоимость доставки по весу, размерам и расстоянию.">
+  <meta name="description" content="Рассчитайте стоимость междугородней доставки по весу, размерам и маршруту.">
   <title>ParcelQuote | Расчёт доставки</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/styles.css">
@@ -24,7 +24,7 @@
     <section class="intro" aria-labelledby="page-title">
       <p class="eyebrow">ПОНЯТНАЯ ЦЕНА. ДО ОТПРАВКИ.</p>
       <h1 id="page-title">Рассчитайте доставку<span class="accent">.</span></h1>
-      <p class="intro-copy">Укажите параметры посылки. Мы покажем стоимость<br class="desktop-break"> и объясним, из чего она складывается.</p>
+      <p class="intro-copy">Выберите города и укажите параметры посылки.<br class="desktop-break"> Мы покажем стоимость междугородней доставки.</p>
     </section>
 
     <div class="calculator">
@@ -58,12 +58,19 @@
           </div>
           <p class="hint dimensions-hint" id="dimensions-hint">Каждая сторона от 1 до 100 см, целые числа</p>
 
-          <div class="field distance-field">
-            <label for="distanceKm">Расстояние, км</label>
-            <input id="distanceKm" name="distanceKm" type="text" inputmode="numeric" placeholder="Например, 150" aria-describedby="distanceKm-hint distanceKm-error">
-            <p class="hint" id="distanceKm-hint">От 1 до 3000 км, целое число</p>
-            <p class="field-error" id="distanceKm-error"></p>
+          <div class="route-fields">
+            <div class="field">
+              <label for="originCity">Город отправления</label>
+              <select id="originCity" name="originCity" aria-describedby="originCity-error"><option value="">Выберите город</option>{{cityOptions}}</select>
+              <p class="field-error" id="originCity-error"></p>
+            </div>
+            <div class="field">
+              <label for="destinationCity">Город назначения</label>
+              <select id="destinationCity" name="destinationCity" aria-describedby="destinationCity-error"><option value="">Выберите город</option>{{cityOptions}}</select>
+              <p class="field-error" id="destinationCity-error"></p>
+            </div>
           </div>
+          <p class="hint">Только междугородние перевозки. Расстояния в расчёте учебные.</p>
 
           <fieldset class="delivery-fieldset" aria-describedby="deliveryType-error">
             <legend>Тип доставки</legend>
@@ -95,6 +102,7 @@
           <p class="result-eyebrow">ИТОГО К ОПЛАТЕ</p>
           <p class="total" data-testid="total" id="total"></p>
           <p class="result-caption">Стоимость по учебному тарифу</p>
+          <p class="route-summary" id="route-summary"></p>
           <h3 class="breakdown-title">Из чего складывается цена</h3>
           <dl class="breakdown" id="price-breakdown"></dl>
           <details class="weight-details" open>

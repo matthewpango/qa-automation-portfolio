@@ -1,6 +1,6 @@
 # ParcelQuote
 
-Небольшой сервис расчёта стоимости доставки: JSON API и веб-форма на русском.
+Небольшой сервис расчёта стоимости междугородней доставки: JSON API и веб-форма на русском.
 Учебный продукт для портфолио QA Automation Engineer на TypeScript и Playwright.
 Тарифы вымышленные, сервис не оформляет отправления реальных перевозчиков.
 
@@ -22,7 +22,7 @@ docker compose logs -f
 docker compose down
 ```
 
-После изменения кода или `src/tariffs.json` повторите команду запуска с `--build`:
+После изменения кода, `src/tariffs.json` или `src/routes.json` повторите команду запуска с `--build`:
 файлы входят в образ, тома для хранения данных не нужны.
 Если порт 3000 занят, поменяйте первую часть привязки в `compose.yaml`,
 например на `127.0.0.1:3001:3000`, и откройте http://127.0.0.1:3001.
@@ -49,7 +49,8 @@ npm start
 ```
 
 База данных, ключи доступа и внешние API не нужны. Расчёты не сохраняются.
-Тарифы находятся в `src/tariffs.json`; после изменения перезапустите приложение.
+Тарифы находятся в `src/tariffs.json`, города и учебные расстояния в `src/routes.json`.
+После изменения перезапустите приложение.
 
 ## Параметры
 
@@ -59,13 +60,42 @@ npm start
 | lengthCm | Длина, см | Целое число 1–100 |
 | widthCm | Ширина, см | Целое число 1–100 |
 | heightCm | Высота, см | Целое число 1–100 |
-| distanceKm | Расстояние, км | Целое число 1–3000 |
+| originCity | Город отправления | Код города из списка ниже |
+| destinationCity | Город назначения | Код другого города из списка ниже |
 | deliveryType | Доставка | `standard` или `express` |
 | fragile | Хрупкий груз | `true` или `false` |
 
 Все границы включены. Все поля обязательны. Неизвестные поля, `null` и строки
 вместо чисел отклоняются. В форме вес можно вводить через точку или запятую,
 в JSON используются числа с точкой. Значения `1.250` и `1.25` эквивалентны.
+
+## Города и маршруты
+
+| Город | Код |
+|---|---|
+| Москва | `moscow` |
+| Санкт-Петербург | `saint-petersburg` |
+| Казань | `kazan` |
+| Нижний Новгород | `nizhny-novgorod` |
+| Воронеж | `voronezh` |
+| Ростов-на-Дону | `rostov-on-don` |
+| Волгоград | `volgograd` |
+| Самара | `samara` |
+| Краснодар | `krasnodar` |
+| Екатеринбург | `yekaterinburg` |
+
+В форме нужно выбрать город отправления и город назначения. Одинаковые города
+запрещены: доступны только междугородние перевозки. Расстояние определяет сервер,
+его нельзя передать или подменить в запросе.
+
+Таблица в `src/routes.json` содержит **условные учебные расстояния**, а не точные
+километры по автодорогам. Порядок строк и столбцов соответствует массиву `cities`.
+Обратный маршрут имеет такое же расстояние. Доступны все 90 направлений между
+разными городами. Например, Москва → Санкт-Петербург: 700 км, Москва → Казань: 820 км.
+
+Запросы старой версии с полем `distanceKm` больше не принимаются: вместо него
+обязательны `originCity` и `destinationCity`. В ответе `distanceKm` сохраняется
+как вычисленное сервером расстояние.
 
 ## Расчёт
 
@@ -86,7 +116,7 @@ npm start
 
 `POST /api/quote`, `Content-Type: application/json`.
 
-Пример запроса, обычная посылка 2 кг на 15 км:
+Пример запроса, обычная посылка 2 кг из Москвы в Санкт-Петербург:
 
 ```json
 {
@@ -94,7 +124,8 @@ npm start
   "lengthCm": 10,
   "widthCm": 10,
   "heightCm": 10,
-  "distanceKm": 15,
+  "originCity": "moscow",
+  "destinationCity": "saint-petersburg",
   "deliveryType": "standard",
   "fragile": false
 }
@@ -105,7 +136,8 @@ npm start
 ```powershell
 $parcel = @{
   weightKg = 2; lengthCm = 10; widthCm = 10; heightCm = 10
-  distanceKm = 15; deliveryType = 'standard'; fragile = $false
+  originCity = 'moscow'; destinationCity = 'saint-petersburg'
+  deliveryType = 'standard'; fragile = $false
 }
 Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:3000/api/quote' `
   -ContentType 'application/json' -Body ($parcel | ConvertTo-Json)
@@ -119,21 +151,26 @@ Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:3000/api/quote' `
   "volumetricWeightKg": 0.2,
   "chargeableWeightKg": 2,
   "billedWeightKg": 2,
-  "distanceBlocks": 2,
+  "distanceBlocks": 70,
   "baseCostRub": 100,
   "weightCostRub": 100,
-  "distanceCostRub": 20,
-  "subtotalRub": 220,
+  "distanceCostRub": 700,
+  "subtotalRub": 900,
   "deliveryMultiplier": 1,
   "expressSurchargeRub": 0,
   "fragileSurchargeRub": 0,
-  "totalRub": 220,
-  "currency": "RUB"
+  "totalRub": 900,
+  "currency": "RUB",
+  "originCity": "moscow",
+  "destinationCity": "saint-petersburg",
+  "originCityName": "Москва",
+  "destinationCityName": "Санкт-Петербург",
+  "distanceKm": 700
 }
 ```
 
-Для того же запроса `deliveryType: "express"` даёт 330 ₽.
-Дополнительно `fragile: true` даёт 430 ₽.
+Для того же запроса `deliveryType: "express"` даёт 1350 ₽.
+Дополнительно `fragile: true` даёт 1450 ₽.
 
 Ошибки:
 
@@ -164,8 +201,10 @@ npm run test:ui
   отдельный тестовый сервер на порту 3100 запускается автоматически.
 - `npm test`: все перечисленные проверки.
 
-Smoke-набор проверяет реальный расчёт, ошибки, дробный вес, повторный запрос,
-устаревший ответ и узкий экран. Для сбоев сети используются перехваты Playwright.
+Smoke-набор проверяет реальный расчёт, ошибки, дробный вес, выбор городов,
+запрет внутригородского маршрута, повторный запрос, устаревший ответ и узкий экран.
+Серверные проверки также проверяют полноту и симметрию таблицы маршрутов.
+Для сбоев сети используются перехваты Playwright.
 Трейс сохраняется при неудаче в `test-results/`.
 
 Это минимальные проверки надёжности продукта. Полный портфолио-набор,

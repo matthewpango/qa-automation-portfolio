@@ -13,7 +13,6 @@ const numericFields = {
   lengthCm: { min: 1, max: 100, message: 'Укажите целую длину от 1 до 100 см.' },
   widthCm: { min: 1, max: 100, message: 'Укажите целую ширину от 1 до 100 см.' },
   heightCm: { min: 1, max: 100, message: 'Укажите целую высоту от 1 до 100 см.' },
-  distanceKm: { min: 1, max: 3000, message: 'Укажите целое расстояние от 1 до 3000 км.' },
 };
 
 function clearErrors() {
@@ -71,6 +70,8 @@ function showResult(quote) {
   const rub = (value) => `${moneyFormat.format(value)} ₽`;
   const kg = (value) => `${numberFormat.format(value)} кг`;
   document.querySelector('#total').textContent = rub(quote.totalRub);
+  document.querySelector('#route-summary').textContent =
+    `${quote.originCityName} → ${quote.destinationCityName} · ${numberFormat.format(quote.distanceKm)} км`;
   renderRows('price-breakdown', [
     ['Базовый сбор', rub(quote.baseCostRub)],
     ['За вес', rub(quote.weightCostRub)],
@@ -108,6 +109,16 @@ form.addEventListener('submit', async (event) => {
     } else {
       payload[field] = value;
     }
+  }
+  for (const [field, message] of [
+    ['originCity', 'Выберите город отправления из списка.'],
+    ['destinationCity', 'Выберите город назначения из списка.'],
+  ]) {
+    payload[field] = form.elements.namedItem(field).value;
+    if (!payload[field]) errors.push({ field, message });
+  }
+  if (payload.originCity && payload.originCity === payload.destinationCity) {
+    errors.push({ field: 'destinationCity', message: 'Выберите другой город назначения.' });
   }
   if (errors.length) {
     showErrors(errors);

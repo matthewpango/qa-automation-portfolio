@@ -9,14 +9,21 @@ const app = buildApp();
 after(() => app.close());
 const parcel = {
   weightKg: 2, lengthCm: 10, widthCm: 10, heightCm: 10,
-  distanceKm: 15, deliveryType: 'standard', fragile: false,
+  originCity: 'moscow', destinationCity: 'saint-petersburg', deliveryType: 'standard', fragile: false,
 };
 
 test('API возвращает расчёт обычной доставки', async () => {
   const response = await app.inject({ method: 'POST', url: '/api/quote', payload: parcel });
   assert.equal(response.statusCode, 200);
-  assert.equal(response.json().totalRub, 220);
-  assert.equal(response.json().currency, 'RUB');
+  assert.match(response.headers['content-type']!, /application\/json/);
+  assert.deepEqual(response.json(), {
+    actualWeightKg: 2, volumetricWeightKg: 0.2, chargeableWeightKg: 2,
+    billedWeightKg: 2, distanceBlocks: 70, baseCostRub: 100,
+    weightCostRub: 100, distanceCostRub: 700, subtotalRub: 900,
+    deliveryMultiplier: 1, expressSurchargeRub: 0, fragileSurchargeRub: 0,
+    totalRub: 900, currency: 'RUB', originCity: 'moscow', destinationCity: 'saint-petersburg',
+    originCityName: 'Москва', destinationCityName: 'Санкт-Петербург', distanceKm: 700,
+  });
 });
 
 const invalid: Array<[string, unknown]> = [
@@ -24,7 +31,9 @@ const invalid: Array<[string, unknown]> = [
   ['weightKg', 0.09], ['weightKg', 30.01], ['weightKg', 1.251],
   ['weightKg', 1.00000000001], ['weightKg', 1.00999999999],
   ['extraField', 1], ['lengthCm', 0], ['widthCm', 101], ['heightCm', 1.5],
-  ['distanceKm', 0], ['distanceKm', 3001], ['distanceKm', 1.5],
+  ['originCity', undefined], ['originCity', null], ['originCity', 1], ['originCity', 'unknown'],
+  ['destinationCity', undefined], ['destinationCity', 'unknown'], ['destinationCity', 'moscow'],
+  ['distanceKm', 15],
   ['deliveryType', 'overnight'], ['fragile', 'false'],
 ];
 for (const [field, value] of invalid) {
@@ -48,10 +57,10 @@ for (const value of [0.1, 0.29, 1.250, 30]) {
   });
 }
 
-test('API принимает включённые границы размеров и расстояния', async () => {
-  for (const [side, distance] of [[1, 1], [100, 3000]]) {
+test('API принимает включённые границы размеров', async () => {
+  for (const side of [1, 100]) {
     const response = await app.inject({ method: 'POST', url: '/api/quote', payload: {
-      ...parcel, lengthCm: side, widthCm: side, heightCm: side, distanceKm: distance,
+      ...parcel, lengthCm: side, widthCm: side, heightCm: side,
     } });
     assert.equal(response.statusCode, 200);
   }
@@ -59,11 +68,11 @@ test('API принимает включённые границы размеро�
 
 test('API возвращает несколько ошибок без автоматического исправления', async () => {
   const response = await app.inject({ method: 'POST', url: '/api/quote', payload: {
-    ...parcel, weightKg: '2', distanceKm: 0, extraField: true,
+    ...parcel, weightKg: '2', destinationCity: 'unknown', extraField: true,
   } });
   assert.equal(response.statusCode, 400);
   assert.deepEqual(new Set(response.json().errors.map((e: { field: string }) => e.field)),
-    new Set(['weightKg', 'distanceKm', 'extraField']));
+    new Set(['weightKg', 'destinationCity', 'extraField']));
 });
 
 test('API сообщает об ошибке всего тела для повреждённого JSON', async () => {
@@ -114,8 +123,8 @@ test('изменённые тарифы определяют и цену, и п�
       ...parcel, deliveryType: 'express', fragile: true,
     } });
     assert.equal(quote.statusCode, 200);
-    assert.equal(quote.json().totalRub, 880);
-    assert.equal(quote.json().distanceBlocks, 1);
+    assert.equal(quote.json().totalRub, 2720);
+    assert.equal(quote.json().distanceBlocks, 47);
     const page = await configured!.inject('/');
     assert.equal(page.statusCode, 200);
     assert.match(page.body, /Базовый сбор<\/span><strong>200 ₽/);
@@ -129,4 +138,19 @@ test('изменённые тарифы определяют и цену, и п�
     assert.equal(dirname(fixture), work);
     await rm(fixture, { recursive: true, force: true });
   }
+});
+
+test('обратный маршрут имеет ту же цену, смена города меняет расстояние и цену', async () => {
+  const reverse = await app.inject({ method: 'POST', url: '/api/quote', payload: {
+    ...parcel, originCity: 'saint-petersburg', destinationCity: 'moscow',
+  } });
+  assert.equal(reverse.statusCode, 200);
+  assert.equal(reverse.json().totalRub, 900);
+  assert.equal(reverse.json().distanceKm, 700);
+  const other = await app.inject({ method: 'POST', url: '/api/quote', payload: {
+    ...parcel, destinationCity: 'kazan',
+  } });
+  assert.equal(other.statusCode, 200);
+  assert.equal(other.json().distanceKm, 820);
+  assert.equal(other.json().totalRub, 1020);
 });
