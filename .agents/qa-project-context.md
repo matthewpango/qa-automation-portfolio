@@ -25,14 +25,14 @@ Requirements: README.md and docs/superpowers/specs/2026-11-09-intercity-routes.m
 
 - node:test: tests/quote.test.ts and tests/routes.test.ts (6 unit cases).
 - node:test + Fastify.inject: tests/app.test.ts (2 internal integration cases: 500 and tariff configuration).
-- Playwright 1.65.0 installed: tests/api/*.spec.ts (63 HTTP API cases), tests/ui.spec.ts (11 browser cases), playwright.config.ts.
+- Playwright 1.65.0 installed: tests/api/*.spec.ts (172 HTTP API cases), tests/ui.spec.ts (27 browser cases), playwright.config.ts.
 - Projects: api (request fixture, no browser) and chromium (UI). BASE_URL selects an existing server; otherwise Playwright starts Node on port 3100.
-- npm test passed 2026-11-09 locally and against Docker: 6 unit, 2 internal integration, 63 HTTP API, 11 UI tests; total 82.
+- Full suite passed 2026-11-09 in the tests container: 6 unit, 2 internal integration, 172 HTTP API, 27 UI tests; total 207.
 - Reporters: list + HTML (playwright-report/) + allure-playwright 3.14.0 with Allure 3.33.0. Trace and screenshot retained on failure. Failure exit code and artifacts verified with deliberate faults in an isolated copy. HTTP suite verified against Docker at http://127.0.0.1:3000.
-- Allure readability: reportScenario(feature, story) from tests/report.ts sets epic Междугородняя доставка and API/UI layer. All 74 Playwright cases have feature/story labels. Russian awesome UI grouped by epic/feature/story with appendTitlePath=false; reporter detail=false and suiteTitle=false. Explicit Russian test.step names describe actions and expected results; automatic API/action/assertion/hook steps are hidden. Failure details, screenshot and trace remain available. Renamed cases may start new history identities.
+- Allure readability: reportScenario(feature, story) from tests/report.ts sets epic Междугородняя доставка and API/UI layer. All 199 Playwright cases have feature/story labels. Russian awesome UI grouped by epic/feature/story with appendTitlePath=false; reporter detail=false and suiteTitle=false. Explicit Russian test.step names describe actions and expected results; automatic API/action/assertion/hook steps are hidden. Failure details, screenshot and trace remain available. Renamed cases may start new history identities.
 - TypeScript 7.0.2 installed; typecheck is tsc --noEmit.
 - ESLint 10.14.0 + eslint-plugin-playwright 2.12.2: npm run lint checks tests/**/*.spec.ts and tests/api/**/*.ts, with flat recommended and strict no-wait-for-timeout/no-force-option/no-element-handle/no-page-pause. Warnings fail. expectQuote/expectErrors are registered assertion helpers. Babel parser parses TS syntax without type analysis because typescript-eslint does not support TS7; tsc checks types separately.
-- Linux compatibility: all 82 checks passed in isolated Linux with Node24.22.2 and Playwright1.65.0 against the Docker app. This does not establish a real GitHub Actions run.
+- Linux compatibility: all 207 checks passed in isolated Linux with Node24.22.2 and Playwright1.65.0 against the Docker app. This does not establish a real GitHub Actions run.
 
 ## CI/CD
 
@@ -42,7 +42,7 @@ Workflow .github/workflows/tests.yml exists and passes actionlint locally. All a
 
 - Local Docker demo: http://127.0.0.1:3000.
 - Primary test command: docker compose --profile test run --build --rm tests. Internal app URL: http://web:3000; depends_on requires healthy app.
-- Reports bind-mounted to host playwright-report/, test-results/ and allure/. Allure covers 74 Playwright tests; eight node:test checks remain in logs. Allure run generates reports even on failure and preserves exit code. History: allure/history.jsonl, CI cache per ref. Two genuine full runs and an isolated failure verified; viewer on port 8080 verified in container Chromium. Container exit=1 and host HTML/trace/screenshot verified with a deliberately failing test. Container report viewer verified on host port 9323.
+- Reports bind-mounted to host playwright-report/, test-results/ and allure/. Allure covers 199 Playwright tests; eight node:test checks remain in logs. Allure run generates reports even on failure and preserves exit code. History: allure/history.jsonl, CI cache per ref. Three consecutive full runs after audit fixes passed without retries; five chosen fault controls detected; viewer on port 8080 verified in container Chromium. Container exit=1 and host HTML/trace/screenshot verified with a deliberately failing test. Container report viewer verified on host port 9323.
 - Automated tests, including focused/debug runs, must execute through the tests container. No native test execution is part of the supported workflow.
 - Production and staging: none established. No deployment service identified.
 - Network failures/delays are controlled with browser routes; normal quotes use real API.
@@ -72,6 +72,7 @@ Team size, roles beyond owner, budget, release cadence and deadlines: not specif
 
 - node:test: tests/*.test.ts; API Playwright: tests/api/*.spec.ts; UI: tests/ui.spec.ts.
 - Prefer getByRole/getByLabel with exact names; use existing test IDs for results.
+- Audit fixes: each independent invalid input and dimension boundary is its own test; 45 bidirectional route pairs cover all90 directions. Eight field changes and two decimal formats are independent UI cases. Two UI cases assert every visible term/definition in price and weight breakdowns; deleting either block is detected. Error fields use accessible descriptions, route unit failures include city codes. Five selected fault controls detected; no full Stryker mutation score. Semantic type/format names distinguish empty object/array, raw bodies and decimal comma/dot cases: punctuation-only differences collide in Playwright output directories. All199 normalized artifact directory names verified unique.
 - No fixed sleeps. Fresh browser context per test, parallel execution.
 - Deterministic small fixtures, literal price expectations independent of product helpers.
 - Temporary configuration copies under ignored work/, never modify shared live data.

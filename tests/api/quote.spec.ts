@@ -52,13 +52,12 @@ for (const [weightKg, lengthCm, widthCm, heightCm, volume, chargeable, billed, t
   });
 }
 
-test('Все 90 междугородних направлений доступны, цена и расстояние одинаковы в обе стороны', async ({ request }) => {
-  await reportScenario('Междугородние маршруты', 'Доступность и симметрия всех направлений');
+for (const [index, [originCity, originCityName]] of cities.entries()) {
+  for (const [destinationCity, destinationCityName] of cities.slice(index + 1)) {
+    test(`Маршрут ${originCityName} ↔ ${destinationCityName}: доставка доступна в обе стороны с одинаковыми ценой и расстоянием`, async ({ request }) => {
+      await reportScenario('Междугородние маршруты', 'Доступность и симметрия всех направлений');
 
-  const results = new Map<string, { distance: number; price: number }>();
-  for (const [originCity, originCityName] of cities) {
-    for (const [destinationCity, destinationCityName] of cities.filter(([city]) => city !== originCity)) {
-      await test.step(`Рассчитать ${originCityName} → ${destinationCityName}: проверить города, расстояние и стоимость`, async () => {
+      const forward = await test.step(`Рассчитать доставку ${originCityName} → ${destinationCityName}`, async () => {
         const body = await expectQuote(await request.post('/api/quote', {
           data: { ...parcel, originCity, destinationCity },
         }));
@@ -67,28 +66,40 @@ test('Все 90 междугородних направлений доступн
         expect(body.originCityName).toBe(originCityName);
         expect(body.destinationCityName).toBe(destinationCityName);
         expect(Number.isInteger(body.distanceKm)).toBe(true);
-        results.set(`${originCity}:${destinationCity}`, { distance: body.distanceKm, price: body.totalRub });
+        return body;
       });
-    }
+
+      const reverse = await test.step(`Рассчитать доставку ${destinationCityName} → ${originCityName}`, async () => {
+        const body = await expectQuote(await request.post('/api/quote', {
+          data: { ...parcel, originCity: destinationCity, destinationCity: originCity },
+        }));
+        expect(body.originCity).toBe(destinationCity);
+        expect(body.destinationCity).toBe(originCity);
+        expect(body.originCityName).toBe(destinationCityName);
+        expect(body.destinationCityName).toBe(originCityName);
+        expect(Number.isInteger(body.distanceKm)).toBe(true);
+        return body;
+      });
+
+      await test.step('Проверить одинаковые цену и расстояние для прямого и обратного маршрута', async () => {
+        expect(reverse.distanceKm).toBe(forward.distanceKm);
+        expect(reverse.totalRub).toBe(forward.totalRub);
+      });
+    });
   }
+}
 
-  await test.step('Проверить все 90 результатов: прямой и обратный маршруты имеют одинаковые цену и расстояние', async () => {
-    expect(results.size).toBe(90);
-    for (const [key, result] of results) expect(results.get(key.split(':').reverse().join(':'))).toEqual(result);
-  });
-});
+for (const [city, name] of cities) {
+  test(`Доставка внутри города ${name} запрещена`, async ({ request }) => {
+    await reportScenario('Междугородние маршруты', 'Запрет доставки внутри города');
 
-test('Доставка внутри каждого из десяти городов запрещена', async ({ request }) => {
-  await reportScenario('Междугородние маршруты', 'Запрет доставки внутри города');
-
-  for (const [city, name] of cities) {
-    await test.step(`Запросить доставку внутри города ${name}: получить отказ`, async () => {
+    await test.step(`Запросить доставку внутри города ${name}: получить отказ и ошибку города назначения`, async () => {
       await expectErrors(await request.post('/api/quote', {
         data: { ...parcel, originCity: city, destinationCity: city },
       }), 400, ['destinationCity']);
     });
-  }
-});
+  });
+}
 
 test('Доставка Москва → Казань: 820 км и стоимость 1 020 ₽', async ({ request }) => {
   await reportScenario('Междугородние маршруты', 'Цена выбранного маршрута');

@@ -22,18 +22,29 @@ const invalidTypes: Array<[string, unknown[]]> = [
   ['deliveryType', [null, 1, true, {}, [], '', 'overnight']],
   ['fragile', [null, 'false', 0, {}, []]],
 ];
-for (const [field, values] of invalidTypes) {
-  test(`Неверные значения поля «${fieldNames[field]}» отклоняются без автоматического исправления`, async ({ request }) => {
-    await reportScenario('Проверка данных посылки', 'Типы данных и допустимые значения');
 
-    for (const value of values) {
-      await test.step(`Передать в поле «${fieldNames[field]}» значение ${JSON.stringify(value)} и получить ошибку`, async () => {
+function describeValue(value: unknown) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'пустой массив []';
+  if (typeof value === 'object') return 'пустой объект {}';
+  const typeNames: Record<string, string> = { string: 'строка', number: 'число', boolean: 'логическое значение' };
+  return `${typeNames[typeof value]} ${JSON.stringify(value)}`;
+}
+
+for (const [field, values] of invalidTypes) {
+  for (const value of values) {
+    const valueName = describeValue(value);
+
+    test(`Поле «${fieldNames[field]}»: ${valueName} отклоняется без исправления`, async ({ request }) => {
+      await reportScenario('Проверка данных посылки', 'Типы данных и допустимые значения');
+
+      await test.step(`Передать в поле «${fieldNames[field]}» ${valueName}: получить ошибку поля`, async () => {
         await expectErrors(await request.post('/api/quote', {
           data: { ...parcel, [field]: value },
         }), 400, [field]);
       });
-    }
-  });
+    });
+  }
 }
 
 for (const weightKg of [0, 0.09, 30.01, 1.251, 1.00000000001, 1.00999999999]) {
@@ -65,30 +76,33 @@ for (const [weightKg, billedWeightKg, totalRub] of [
 }
 
 for (const field of ['lengthCm', 'widthCm', 'heightCm']) {
-  test(`Поле «${fieldNames[field]}» принимает граничные размеры от 1 до 100 см`, async ({ request }) => {
-    await reportScenario('Проверка данных посылки', 'Границы габаритов');
+  for (const [value, volume] of [[1, 0.02], [2, 0.04], [99, 1.98], [100, 2]] as const) {
+    test(`Поле «${fieldNames[field]}»: размер ${value} см принимается и даёт объёмный вес ${volume} кг`, async ({ request }) => {
+      await reportScenario('Проверка данных посылки', 'Границы габаритов');
 
-    for (const value of [1, 2, 99, 100]) {
-      await test.step(`Передать размер ${value} см и проверить результат`, async () => {
+      await test.step(`Передать размер ${value} см: проверить объёмный вес ${volume} кг и цену 900 ₽`, async () => {
         const body = await expectQuote(await request.post('/api/quote', {
           data: { ...parcel, [field]: value },
         }));
+        expect(body.volumetricWeightKg).toBe(volume);
+        expect(body.chargeableWeightKg).toBe(2);
+        expect(body.billedWeightKg).toBe(2);
         expect(body.totalRub).toBe(900);
       });
-    }
-  });
+    });
+  }
 
-  test(`Поле «${fieldNames[field]}» отклоняет размеры вне диапазона и дробные сантиметры`, async ({ request }) => {
-    await reportScenario('Проверка данных посылки', 'Границы габаритов');
+  for (const value of [-1, 0, 101, 1.5]) {
+    test(`Поле «${fieldNames[field]}»: размер ${value} см отклоняется`, async ({ request }) => {
+      await reportScenario('Проверка данных посылки', 'Границы габаритов');
 
-    for (const value of [-1, 0, 101, 1.5]) {
-      await test.step(`Передать размер ${value} см и проверить результат`, async () => {
+      await test.step(`Передать размер ${value} см: получить отказ и ошибку размера`, async () => {
         await expectErrors(await request.post('/api/quote', {
           data: { ...parcel, [field]: value },
         }), 400, [field]);
       });
-    }
-  });
+    });
+  }
 }
 
 for (const field of ['extraField', 'distanceKm']) {
@@ -113,11 +127,19 @@ test('Несколько ошибок запроса возвращаются в
   });
 });
 
-for (const data of ['null', '[]', '42', 'false', '"посылка"', '{', '']) {
-  test(`Некорректное содержимое запроса ${JSON.stringify(data)} отклоняется`, async ({ request }) => {
+for (const [data, description] of [
+  ['null', 'null вместо объекта'],
+  ['[]', 'массив вместо объекта'],
+  ['42', 'число вместо объекта'],
+  ['false', 'логическое значение вместо объекта'],
+  ['"посылка"', 'строка вместо объекта'],
+  ['{', 'оборванный JSON'],
+  ['', 'пустое тело'],
+] as const) {
+  test(`Некорректное содержимое запроса: ${description} отклоняется`, async ({ request }) => {
     await reportScenario('Обмен данными с сервисом', 'Некорректное содержимое запроса');
 
-    await test.step(`Некорректное содержимое запроса ${JSON.stringify(data)} отклоняется`, async () => {
+    await test.step(`Отправить ${description}: получить отказ с кодом 400`, async () => {
       await expectErrors(await request.post('/api/quote', {
         headers: { 'Content-Type': 'application/json' }, data,
       }), 400, [null]);
