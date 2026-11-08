@@ -189,6 +189,10 @@ Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:3000/api/quote' `
 
 ## Проверки первой версии
 
+Подход к дальнейшей автоматизации описан в [тестовой стратегии](docs/qa-strategy.md).
+Требования, риски, существующие проверки и пробелы сведены в
+[матрицу покрытия](docs/qa-coverage-matrix.md).
+
 ```sh
 npm run check
 npx playwright install chromium
