@@ -1,0 +1,9 @@
+{
+  "divisor": 5000,
+  "base": 100,
+  "perKg": 50,
+  "perDistanceBlock": 10,
+  "distanceBlockKm": 10,
+  "expressMultiplier": 1.5,
+  "fragile": 100
+}
