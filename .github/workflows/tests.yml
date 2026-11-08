@@ -1,0 +1,80 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      BASE_URL: http://127.0.0.1:3000
+      FULL_SUITE: ${{ github.event_name != 'push' || github.ref_name == github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Validate workflow
+        run: docker run --rm -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.11 -color
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check types, unit and internal integration tests
+        run: |
+          mkdir -p artifacts
+          npm run check 2>&1 | tee artifacts/check.log
+
+      - name: Install Chromium
+        if: env.FULL_SUITE == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Build and start application
+        if: env.FULL_SUITE == 'true'
+        run: docker compose up --build -d --wait --wait-timeout 90 2>&1 | tee artifacts/docker-build.log
+
+      - name: Run API and UI tests against Docker
+        if: env.FULL_SUITE == 'true'
+        run: npx playwright test 2>&1 | tee artifacts/playwright.log
+
+      - name: Collect container diagnostics
+        if: ${{ !cancelled() && env.FULL_SUITE == 'true' }}
+        run: |
+          mkdir -p artifacts
+          docker compose logs --no-color > artifacts/docker.log 2>&1
+          docker compose ps --all > artifacts/docker-status.txt
+
+      - name: Upload test evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Stop test environment
+        if: always()
+        run: docker compose down --remove-orphans

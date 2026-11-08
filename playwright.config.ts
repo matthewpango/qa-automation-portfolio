@@ -5,11 +5,13 @@ const baseURL = process.env.BASE_URL ?? 'http://127.0.0.1:3100';
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
+  forbidOnly: Boolean(process.env.CI),
   workers: 4,
-  reporter: 'list',
+  reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL,
     trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
   },
   projects: [
     { name: 'api', testMatch: '**/api/*.spec.ts' },

@@ -144,7 +144,117 @@ test('у городов нет обводки после мыши, но есть
   await expect(destination).toBeFocused();
   await expect(destination).toHaveCSS('outline-style', 'solid');
   await expect(destination).toHaveCSS('outline-width', '3px');
+  await page.keyboard.press('Shift+Tab');
+  await expect(origin).toBeFocused();
+  await expect(origin).toHaveCSS('outline-style', 'solid');
+  await page.keyboard.press('Tab');
   await page.keyboard.press('ArrowDown');
   await expect(destination).toBeFocused();
   await expect(destination).toHaveCSS('outline-style', 'solid');
+});
+
+test('UI-03: изменение любого параметра скрывает предыдущую цену', async ({ page }) => {
+  await page.goto('/');
+  const changes = [
+    ['вес', () => page.getByLabel('Вес, кг', { exact: true }).fill('3')],
+    ['длина', () => page.getByLabel('Длина, см', { exact: true }).fill('20')],
+    ['ширина', () => page.getByLabel('Ширина, см', { exact: true }).fill('20')],
+    ['высота', () => page.getByLabel('Высота, см', { exact: true }).fill('20')],
+    ['отправление', () => page.getByLabel('Город отправления', { exact: true }).selectOption('kazan')],
+    ['назначение', () => page.getByLabel('Город назначения', { exact: true }).selectOption('kazan')],
+    ['тип доставки', () => page.getByLabel('Экспресс', { exact: true }).check()],
+    ['хрупкость', () => page.getByLabel('Хрупкий груз', { exact: true }).check()],
+  ] as const;
+  for (const [name, change] of changes) {
+    await test.step(name, async () => {
+      await fillParcel(page);
+      await page.getByLabel('Обычная', { exact: true }).check();
+      await page.getByLabel('Хрупкий груз', { exact: true }).uncheck();
+      await page.getByRole('button', { name: 'Рассчитать стоимость' }).click();
+      await expect(page.getByTestId('total')).toHaveText('900 ₽');
+      await change();
+      await expect(page.getByTestId('quote-result')).toBeHidden();
+    });
+  }
+});
+
+test('UI-03: поздняя ошибка старого маршрута не влияет на новую форму', async ({ page }) => {
+  await page.goto('/');
+  await fillParcel(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/quote', async route => {
+    await gate;
+    await route.fulfill({ status: 500, contentType: 'application/json',
+      body: JSON.stringify({ errors: [{ field: null, message: 'Ошибка старого маршрута.' }] }) });
+  });
+  const sent = page.waitForRequest('**/api/quote');
+  const button = page.getByRole('button', { name: 'Рассчитать стоимость' });
+  await button.click();
+  await sent;
+  await page.getByLabel('Город отправления', { exact: true }).selectOption('kazan');
+  release();
+  await expect(button).toBeEnabled();
+  await expect(page.getByRole('alert')).toBeHidden();
+  await expect(page.getByTestId('quote-result')).toBeHidden();
+  await expect(page.getByLabel('Город отправления', { exact: true })).toHaveValue('kazan');
+  await page.unroute('**/api/quote');
+  await button.click();
+  await expect(page.getByTestId('total')).toHaveText('1 700 ₽');
+  await expect(page.getByTestId('quote-result')).toContainText('Казань → Санкт-Петербург');
+});
+
+test('UI-04: ошибка 500 сохраняет данные и позволяет повторить расчёт', async ({ page }) => {
+  await page.goto('/');
+  await fillParcel(page);
+  await page.route('**/api/quote', route => route.fulfill({ status: 500,
+    contentType: 'application/json', body: JSON.stringify({ errors: [
+      { field: null, message: 'Не удалось выполнить расчёт. Попробуйте позже.' },
+    ] }) }), { times: 1 });
+  const button = page.getByRole('button', { name: 'Рассчитать стоимость' });
+  await button.click();
+  await expect(page.getByRole('alert')).toContainText('Попробуйте позже');
+  await expect(page.getByTestId('quote-result')).toBeHidden();
+  await expect(page.getByLabel('Вес, кг', { exact: true })).toHaveValue('2');
+  await expect(page.getByLabel('Город назначения', { exact: true })).toHaveValue('saint-petersburg');
+  await expect(button).toBeEnabled();
+  await button.click();
+  await expect(page.getByTestId('total')).toHaveText('900 ₽');
+  await expect(page.getByRole('alert')).toBeHidden();
+});
+
+test('UI-02/05: точка и запятая дают одинаковый расчёт и точный payload', async ({ page }) => {
+  await page.goto('/');
+  await fillParcel(page);
+  const results = [];
+  for (const value of ['1.25', '1,25']) {
+    await page.getByLabel('Вес, кг', { exact: true }).fill(value);
+    const sent = page.waitForRequest('**/api/quote');
+    await page.getByRole('button', { name: 'Рассчитать стоимость' }).click();
+    const request = await sent;
+    expect(request.postDataJSON()).toEqual({
+      weightKg: 1.25, lengthCm: 10, widthCm: 10, heightCm: 10,
+      originCity: 'moscow', destinationCity: 'saint-petersburg', deliveryType: 'standard', fragile: false,
+    });
+    await expect(page.getByTestId('total')).toHaveText('900 ₽');
+    const response = await request.response();
+    expect(response?.status()).toBe(200);
+    results.push(await response!.json());
+  }
+  expect(results[0]).toEqual(results[1]);
+});
+
+test('UI-01: пустой город назначения не отправляет запрос', async ({ page }) => {
+  await page.goto('/');
+  await fillParcel(page);
+  const destination = page.getByRole('combobox', { name: 'Город назначения', exact: true });
+  await destination.selectOption('');
+  const requests: string[] = [];
+  page.on('request', request => { if (request.url().endsWith('/api/quote')) requests.push(request.url()); });
+  await page.getByRole('button', { name: 'Рассчитать стоимость' }).click();
+  await expect(destination).toHaveAttribute('aria-invalid', 'true');
+  await expect(destination).toHaveAccessibleDescription('Выберите город назначения из списка.');
+  await expect(destination).toBeFocused();
+  await expect(page.getByTestId('quote-result')).toBeHidden();
+  expect(requests).toEqual([]);
 });

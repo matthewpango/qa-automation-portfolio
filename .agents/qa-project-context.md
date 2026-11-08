@@ -25,16 +25,16 @@ Requirements: README.md and docs/superpowers/specs/2026-11-09-intercity-routes.m
 
 - node:test: tests/quote.test.ts and tests/routes.test.ts (6 unit cases).
 - node:test + Fastify.inject: tests/app.test.ts (2 internal integration cases: 500 and tariff configuration).
-- Playwright 1.65.0 installed: tests/api/*.spec.ts (63 HTTP API cases), tests/ui.spec.ts (6 browser cases), playwright.config.ts.
+- Playwright 1.65.0 installed: tests/api/*.spec.ts (63 HTTP API cases), tests/ui.spec.ts (11 browser cases), playwright.config.ts.
 - Projects: api (request fixture, no browser) and chromium (UI). BASE_URL selects an existing server; otherwise Playwright starts Node on port 3100.
-- npm test passed 2026-11-09 locally and against Docker: 6 unit, 2 internal integration, 63 HTTP API, 6 UI tests; total 77.
-- Reporter: list; trace retained on failure. HTTP suite verified against Docker at http://127.0.0.1:3000.
+- npm test passed 2026-11-09 locally and against Docker: 6 unit, 2 internal integration, 63 HTTP API, 11 UI tests; total 82.
+- Reporters: list + HTML (playwright-report/). Trace and screenshot retained on failure. Failure exit code and artifacts verified with deliberate faults in an isolated copy. HTTP suite verified against Docker at http://127.0.0.1:3000.
 - TypeScript 7.0.2 installed; typecheck is tsc --noEmit.
+- Linux compatibility: all 82 checks passed in isolated Linux with Node24.22.2 and Playwright1.65.0 against the Docker app. This does not establish a real GitHub Actions run.
 
 ## CI/CD
 
-No workflow or enforced CI gates found. GitHub Actions and HTML reports are proposed
-next steps in docs/qa-strategy.md, not existing infrastructure. No sharding.
+Workflow .github/workflows/tests.yml exists and passes actionlint locally. Branch pushes run workflow lint + type/unit/internal integration checks; PR, default-branch push and manual runs also build Docker and run API/UI. Artifacts retained 14 days; cleanup runs always. No retries or sharding. GitHub execution and required status checks are NOT verified: repository has no remote.
 
 ## Environments
 
