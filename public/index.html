@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Рассчитайте стоимость доставки по весу, размерам и расстоянию.">
+  <title>ParcelQuote | Расчёт доставки</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="ParcelQuote, главная">
+        <span class="brand-icon" aria-hidden="true">P<span>Q</span></span>
+        ParcelQuote
+      </a>
+      <span class="header-note">Каждый километр на счету</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">ПОНЯТНАЯ ЦЕНА. ДО ОТПРАВКИ.</p>
+      <h1 id="page-title">Рассчитайте доставку<span class="accent">.</span></h1>
+      <p class="intro-copy">Укажите параметры посылки. Мы покажем стоимость<br class="desktop-break"> и объясним, из чего она складывается.</p>
+    </section>
+
+    <div class="calculator">
+      <section class="form-card" aria-labelledby="form-title">
+        <div class="section-heading"><span class="step" aria-hidden="true">01</span><h2 id="form-title">Ваша посылка</h2></div>
+        <form id="quote-form" novalidate>
+          <div class="field">
+            <label for="weightKg">Вес, кг</label>
+            <input id="weightKg" name="weightKg" type="text" inputmode="decimal" placeholder="Например, 2,5" aria-describedby="weightKg-hint weightKg-error">
+            <p class="hint" id="weightKg-hint">От 0,1 до 30 кг, точность до 0,01 кг</p>
+            <p class="field-error" id="weightKg-error"></p>
+          </div>
+
+          <p class="field-group-title">Размеры посылки</p>
+          <div class="dimensions">
+            <div class="field">
+              <label for="lengthCm">Длина, см</label>
+              <input id="lengthCm" name="lengthCm" type="text" inputmode="numeric" placeholder="20" aria-describedby="dimensions-hint lengthCm-error">
+              <p class="field-error" id="lengthCm-error"></p>
+            </div>
+            <div class="field">
+              <label for="widthCm">Ширина, см</label>
+              <input id="widthCm" name="widthCm" type="text" inputmode="numeric" placeholder="15" aria-describedby="dimensions-hint widthCm-error">
+              <p class="field-error" id="widthCm-error"></p>
+            </div>
+            <div class="field">
+              <label for="heightCm">Высота, см</label>
+              <input id="heightCm" name="heightCm" type="text" inputmode="numeric" placeholder="10" aria-describedby="dimensions-hint heightCm-error">
+              <p class="field-error" id="heightCm-error"></p>
+            </div>
+          </div>
+          <p class="hint dimensions-hint" id="dimensions-hint">Каждая сторона от 1 до 100 см, целые числа</p>
+
+          <div class="field distance-field">
+            <label for="distanceKm">Расстояние, км</label>
+            <input id="distanceKm" name="distanceKm" type="text" inputmode="numeric" placeholder="Например, 150" aria-describedby="distanceKm-hint distanceKm-error">
+            <p class="hint" id="distanceKm-hint">От 1 до 3000 км, целое число</p>
+            <p class="field-error" id="distanceKm-error"></p>
+          </div>
+
+          <fieldset class="delivery-fieldset" aria-describedby="deliveryType-error">
+            <legend>Тип доставки</legend>
+            <div class="delivery-options">
+              <label class="delivery-option"><input type="radio" name="deliveryType" value="standard" aria-labelledby="standard-label" aria-describedby="standard-hint" checked><span><strong id="standard-label">Обычная</strong><small id="standard-hint">Базовый тариф</small></span></label>
+              <label class="delivery-option"><input type="radio" name="deliveryType" value="express" aria-labelledby="express-label" aria-describedby="express-hint"><span><strong id="express-label">Экспресс</strong><small id="express-hint">Стоимость × 1,5</small></span></label>
+            </div>
+            <p class="field-error" id="deliveryType-error"></p>
+          </fieldset>
+
+          <label class="fragile-option" for="fragile"><input id="fragile" name="fragile" type="checkbox" aria-labelledby="fragile-label" aria-describedby="fragile-hint fragile-error"><span id="fragile-label">Хрупкий груз</span><span class="option-price" id="fragile-hint">+100 ₽</span></label>
+          <p class="field-error" id="fragile-error"></p>
+          <p id="form-error" class="form-error" role="alert" hidden></p>
+          <p id="form-status" class="visually-hidden" role="status"></p>
+          <button type="submit"><span>Рассчитать стоимость</span><span aria-hidden="true">↗</span></button>
+        </form>
+      </section>
+
+      <section class="result-card" aria-labelledby="result-title">
+        <div class="section-heading"><span class="step" aria-hidden="true">02</span><h2 id="result-title">Ваш расчёт</h2></div>
+        <div id="empty-result" class="empty-result">
+          <svg class="parcel-icon" viewBox="0 0 120 120" fill="none" aria-hidden="true"><path d="M60 12 105 37v47L60 110 15 84V37L60 12Z" fill="#eee9df" stroke="currentColor" stroke-width="2"/><path d="m15 37 45 26 45-26M60 63v47M38 24l45 26v19" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m28 75 17 10m-17-2 10 6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+          <h3>Всё начинается с посылки</h3>
+          <p>Заполните форму слева,<br>чтобы узнать стоимость доставки.</p>
+          <span class="empty-caption">Вес + расстояние + ваши опции</span>
+        </div>
+
+        <div id="quote-result" data-testid="quote-result" hidden>
+          <p class="result-eyebrow">ИТОГО К ОПЛАТЕ</p>
+          <p class="total" data-testid="total" id="total"></p>
+          <p class="result-caption">Стоимость по учебному тарифу</p>
+          <h3 class="breakdown-title">Из чего складывается цена</h3>
+          <dl class="breakdown" id="price-breakdown"></dl>
+          <details class="weight-details" open>
+            <summary>Вес и расстояние в расчёте</summary>
+            <dl class="breakdown weight-breakdown" id="weight-breakdown"></dl>
+          </details>
+          <p class="result-note">Для расчёта используется больший из фактического и объёмного веса. Каждый начатый килограмм оплачивается целиком.</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="tariff-strip" aria-label="Как устроен тариф">
+      <div><span class="tariff-label">Базовый сбор</span><strong>100 ₽</strong></div>
+      <div><span class="tariff-label">Каждый начатый кг</span><strong>50 ₽</strong></div>
+      <div><span class="tariff-label">Каждые начатые 10 км</span><strong>10 ₽</strong></div>
+    </section>
+    <footer><span>ParcelQuote</span><p>Учебный калькулятор. Не является предложением реального перевозчика.</p></footer>
+  </main>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { readFile } from 'node:fs/promises';
 import type { FastifyError, FastifyInstance } from 'fastify';
 import { calculateQuote } from './quote.ts';
 import type { QuoteInput } from './quote.ts';
@@ -65,6 +66,15 @@ export function buildApp(): FastifyInstance {
       },
     } },
   }, async (request) => calculateQuote(request.body));
+
+  for (const [route, file, contentType] of [
+    ['/', 'index.html', 'text/html; charset=utf-8'],
+    ['/styles.css', 'styles.css', 'text/css; charset=utf-8'],
+    ['/app.js', 'app.js', 'application/javascript; charset=utf-8'],
+  ]) {
+    app.get(route, async (_request, reply) => reply.type(contentType)
+      .send(await readFile(new URL(`../public/${file}`, import.meta.url))));
+  }
 
   return app;
 }
