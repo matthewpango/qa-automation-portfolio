@@ -46,8 +46,7 @@ for (const [weightKg, lengthCm, widthCm, heightCm, volume, chargeable, billed, t
 test('ROUTE-01/02: все 90 направлений доступны, обратные маршруты симметричны', async ({ request }) => {
   const results = new Map<string, { distance: number; price: number }>();
   for (const [originCity, originCityName] of cities) {
-    for (const [destinationCity, destinationCityName] of cities) {
-      if (originCity === destinationCity) continue;
+    for (const [destinationCity, destinationCityName] of cities.filter(([city]) => city !== originCity)) {
       await test.step(`${originCityName} → ${destinationCityName}`, async () => {
         const body = await expectQuote(await request.post('/api/quote', {
           data: { ...parcel, originCity, destinationCity },
@@ -61,6 +60,7 @@ test('ROUTE-01/02: все 90 направлений доступны, обрат
       });
     }
   }
+
   expect(results.size).toBe(90);
   for (const [key, result] of results) expect(results.get(key.split(':').reverse().join(':'))).toEqual(result);
 });

@@ -35,7 +35,7 @@ jobs:
           mkdir -p artifacts allure
           docker compose --profile test build tests 2>&1 | tee artifacts/tests-build.log
 
-      - name: Check types, unit and internal integration tests in container
+      - name: Lint, check types, unit and internal integration tests in container
         run: docker compose --profile test run --rm --no-deps tests npm run check 2>&1 | tee artifacts/check.log
 
       - name: Build and start application

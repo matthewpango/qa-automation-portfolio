@@ -8,7 +8,7 @@ ENV CI=true BASE_URL=http://web:3000
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund && npm cache clean --force
 
-COPY tsconfig.json playwright.config.ts allurerc.mjs ./
+COPY tsconfig.json playwright.config.ts allurerc.mjs eslint.config.mjs ./
 COPY src ./src
 COPY public ./public
 COPY tests ./tests

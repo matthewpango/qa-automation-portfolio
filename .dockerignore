@@ -8,5 +8,6 @@
 !tsconfig.json
 !playwright.config.ts
 !allurerc.mjs
+!eslint.config.mjs
 !tests/
 !tests/**

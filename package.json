@@ -16,20 +16,26 @@
     "test:ui": "allure run -- playwright test --project=chromium",
     "test:playwright": "allure run -- playwright test",
     "allure:open": "allure serve --host 0.0.0.0 --port 8080",
-    "check": "npm run typecheck && npm run test:unit && npm run test:integration",
-    "test": "npm run check && npm run test:playwright"
+    "check": "npm run lint && npm run typecheck && npm run test:unit && npm run test:integration",
+    "test": "npm run check && npm run test:playwright",
+    "lint": "eslint tests --max-warnings=0"
   },
   "dependencies": {
     "fastify": "^5.12.8"
   },
   "overrides": {
-    "glob": "14.0.2"
+    "glob": "14.0.2",
+    "minimatch": "11.0.5"
   },
   "devDependencies": {
+    "@babel/core": "8.1.0",
+    "@babel/eslint-parser": "8.0.7",
     "@playwright/test": "^1.65.0",
     "@types/node": "^24.19.2",
     "allure": "3.33.0",
     "allure-playwright": "3.14.0",
+    "eslint": "10.14.0",
+    "eslint-plugin-playwright": "2.12.2",
     "typescript": "^7.0.2"
   }
 }

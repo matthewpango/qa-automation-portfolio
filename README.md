@@ -219,14 +219,32 @@ docker compose --profile test run --build --rm tests npm run test:ui
 
 Команды npm выполняются внутри тестового контейнера:
 
+- `npm run lint`: ESLint с рекомендованными правилами Playwright для UI/API-тестов.
 - `npm run typecheck`: строгая проверка TypeScript.
 - `npm run test:unit`: формула и таблица маршрутов через node:test.
 - `npm run test:integration`: две внутренние проверки через Fastify.inject:
   обработка 500 и изолированная смена конфигурации тарифов.
-- `npm run check`: TypeScript, unit и внутренние интеграционные проверки.
+- `npm run check`: ESLint, TypeScript, unit и внутренние интеграционные проверки.
 - `npm run test:api`: 63 API-теста на Playwright, только HTTP без запуска браузера.
 - `npm run test:ui`: 11 браузерных сценариев Playwright в Chromium.
 - `npm test`: все перечисленные проверки.
+
+Отдельный запуск линтера:
+
+```sh
+docker compose --profile test run --build --rm --no-deps tests npm run lint
+```
+
+Настройки находятся в `eslint.config.mjs`. Включены рекомендованные правила
+`eslint-plugin-playwright`; фиксированные паузы, force-клики, ElementHandle и
+`page.pause()` запрещены. Предупреждения тоже останавливают проверку.
+Assertion-хелперы `expectQuote` и `expectErrors` распознаются как проверки.
+Линтер проверяет Playwright-файлы `tests/**/*.spec.ts` и `tests/api/**/*.ts`.
+
+Для разбора TS-синтаксиса используется Babel без преобразования кода.
+Установленный TypeScript 7 выходит за диапазон поддержки
+[typescript-eslint](https://typescript-eslint.io/users/dependency-versions/).
+Типы отдельно проверяет `tsc`; Babel не заменяет эту проверку.
 
 В одной конфигурации Playwright два проекта: `api` и `chromium`.
 В Compose `BASE_URL` уже задан для контейнерной сети, поэтому раннер использует
@@ -271,8 +289,8 @@ docker compose --profile test run --rm --no-deps -p 127.0.0.1:8080:8080 tests np
 Каждый запуск показывает только свои результаты, сохраняя историю предыдущих.
 В CI история восстанавливается из cache для той же Git-ссылки и сохраняется
 после полного прогона. Тренды требуют накопления реальных запусков.
-Версия `glob` закреплена через npm overrides для устранения уязвимости
-транзитивной зависимости генератора.
+Версии `glob` и `minimatch` закреплены через npm overrides для устранения
+уязвимостей транзитивных зависимостей генератора и линтера.
 
 
 После запуска Playwright HTML-отчёт находится в `playwright-report/`:
@@ -288,7 +306,7 @@ Workflow: `.github/workflows/tests.yml`, job `tests`.
 
 | Событие | Проверки |
 |---|---|
-| Push в рабочую ветку | Workflow lint, TypeScript, unit, внутренние интеграционные |
+| Push в рабочую ветку | Workflow lint, ESLint, TypeScript, unit, внутренние интеграционные |
 | Pull request | Всё выше + сборка Docker + все API и UI |
 | Push в основную ветку | Полный набор, включая Docker |
 | Ручной workflow_dispatch | Полный набор, включая Docker |

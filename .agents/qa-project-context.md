@@ -30,11 +30,12 @@ Requirements: README.md and docs/superpowers/specs/2026-11-09-intercity-routes.m
 - npm test passed 2026-11-09 locally and against Docker: 6 unit, 2 internal integration, 63 HTTP API, 11 UI tests; total 82.
 - Reporters: list + HTML (playwright-report/) + allure-playwright 3.14.0 with Allure 3.33.0. Trace and screenshot retained on failure. Failure exit code and artifacts verified with deliberate faults in an isolated copy. HTTP suite verified against Docker at http://127.0.0.1:3000.
 - TypeScript 7.0.2 installed; typecheck is tsc --noEmit.
+- ESLint 10.14.0 + eslint-plugin-playwright 2.12.2: npm run lint checks tests/**/*.spec.ts and tests/api/**/*.ts, with flat recommended and strict no-wait-for-timeout/no-force-option/no-element-handle/no-page-pause. Warnings fail. expectQuote/expectErrors are registered assertion helpers. Babel parser parses TS syntax without type analysis because typescript-eslint does not support TS7; tsc checks types separately.
 - Linux compatibility: all 82 checks passed in isolated Linux with Node24.22.2 and Playwright1.65.0 against the Docker app. This does not establish a real GitHub Actions run.
 
 ## CI/CD
 
-Workflow .github/workflows/tests.yml exists and passes actionlint locally. All automated checks run INSIDE the tests Compose service, never directly on the runner. No setup-node, npm ci or browser install on the host; build and run Dockerfile.tests instead. Branch pushes run workflow lint + type/unit/internal integration checks; PR, default-branch push and manual runs also build Docker and run API/UI. Artifacts retained 14 days; cleanup runs always. No retries or sharding. GitHub execution and required status checks are NOT verified: repository has no remote.
+Workflow .github/workflows/tests.yml exists and passes actionlint locally. All automated checks run INSIDE the tests Compose service, never directly on the runner. No setup-node, npm ci or browser install on the host; build and run Dockerfile.tests instead. Branch pushes run workflow lint + ESLint + type/unit/internal integration checks; PR, default-branch push and manual runs also build Docker and run API/UI. Artifacts retained 14 days; cleanup runs always. No retries or sharding. GitHub execution and required status checks are NOT verified: repository has no remote.
 
 ## Environments
 

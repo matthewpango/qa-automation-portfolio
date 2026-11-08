@@ -60,6 +60,7 @@ for (const field of ['lengthCm', 'widthCm', 'heightCm']) {
       });
     }
   });
+
   test(`API-04: внешние границы и дробь ${field}`, async ({ request }) => {
     for (const value of [-1, 0, 101, 1.5]) {
       await test.step(String(value), async () => {
