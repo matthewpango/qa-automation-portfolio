@@ -6,3 +6,15 @@ work/
 .superpowers/
 *.log
 .env
+.env.*
+!.env.example
+artifacts/
+coverage/
+.eslintcache
+*.tsbuildinfo
+.scratch/
+.agents/skills/
+skills-lock.json
+.codex/
+.DS_Store
+Thumbs.db
