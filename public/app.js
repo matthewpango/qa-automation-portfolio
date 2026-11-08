@@ -84,7 +84,7 @@ function showResult(quote) {
     ['Объёмный вес', kg(quote.volumetricWeightKg)],
     ['Расчётный вес', kg(quote.chargeableWeightKg)],
     ['Оплачиваемый вес', kg(quote.billedWeightKg)],
-    ['Блоки расстояния по 10 км', numberFormat.format(quote.distanceBlocks)],
+    [`Блоки расстояния по ${result.dataset.distanceBlockKm} км`, numberFormat.format(quote.distanceBlocks)],
   ]);
   emptyResult.hidden = true;
   result.hidden = false;
@@ -102,7 +102,7 @@ form.addEventListener('submit', async (event) => {
     const raw = form.elements.namedItem(field).value.trim();
     const pattern = rule.decimal ? /^\d+(?:[.,]\d+)?$/ : /^\d+$/;
     const value = Number(raw.replace(',', '.'));
-    const validPrecision = !rule.decimal || Math.abs(value * 100 - Math.round(value * 100)) < 1e-8;
+    const validPrecision = !rule.decimal || value === Math.round(value * 100) / 100;
     if (!pattern.test(raw) || !Number.isFinite(value) || value < rule.min || value > rule.max || !validPrecision) {
       errors.push({ field, message: rule.message });
     } else {

@@ -39,7 +39,7 @@ test('ошибки полей сохраняют данные и доступн�
   await fillParcel(page);
   let requests = 0;
   page.on('request', (request) => { if (request.url().endsWith('/api/quote')) requests++; });
-  for (const value of ['', '1,2,3']) {
+  for (const value of ['', '1,2,3', '1.00000000001']) {
     await page.getByLabel('Вес, кг', { exact: true }).fill(value);
     await page.getByRole('button', { name: 'Рассчитать стоимость' }).click();
     await expect(page.getByLabel('Вес, кг', { exact: true })).toHaveAttribute('aria-invalid', 'true');

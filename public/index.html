@@ -69,12 +69,12 @@
             <legend>Тип доставки</legend>
             <div class="delivery-options">
               <label class="delivery-option"><input type="radio" name="deliveryType" value="standard" aria-labelledby="standard-label" aria-describedby="standard-hint" checked><span><strong id="standard-label">Обычная</strong><small id="standard-hint">Базовый тариф</small></span></label>
-              <label class="delivery-option"><input type="radio" name="deliveryType" value="express" aria-labelledby="express-label" aria-describedby="express-hint"><span><strong id="express-label">Экспресс</strong><small id="express-hint">Стоимость × 1,5</small></span></label>
+              <label class="delivery-option"><input type="radio" name="deliveryType" value="express" aria-labelledby="express-label" aria-describedby="express-hint"><span><strong id="express-label">Экспресс</strong><small id="express-hint">Стоимость × {{expressMultiplier}}</small></span></label>
             </div>
             <p class="field-error" id="deliveryType-error"></p>
           </fieldset>
 
-          <label class="fragile-option" for="fragile"><input id="fragile" name="fragile" type="checkbox" aria-labelledby="fragile-label" aria-describedby="fragile-hint fragile-error"><span id="fragile-label">Хрупкий груз</span><span class="option-price" id="fragile-hint">+100 ₽</span></label>
+          <label class="fragile-option" for="fragile"><input id="fragile" name="fragile" type="checkbox" aria-labelledby="fragile-label" aria-describedby="fragile-hint fragile-error"><span id="fragile-label">Хрупкий груз</span><span class="option-price" id="fragile-hint">+{{fragile}} ₽</span></label>
           <p class="field-error" id="fragile-error"></p>
           <p id="form-error" class="form-error" role="alert" hidden></p>
           <p id="form-status" class="visually-hidden" role="status"></p>
@@ -91,7 +91,7 @@
           <span class="empty-caption">Вес + расстояние + ваши опции</span>
         </div>
 
-        <div id="quote-result" data-testid="quote-result" hidden>
+        <div id="quote-result" data-testid="quote-result" data-distance-block-km="{{distanceBlockKm}}" hidden>
           <p class="result-eyebrow">ИТОГО К ОПЛАТЕ</p>
           <p class="total" data-testid="total" id="total"></p>
           <p class="result-caption">Стоимость по учебному тарифу</p>
@@ -107,9 +107,9 @@
     </div>
 
     <section class="tariff-strip" aria-label="Как устроен тариф">
-      <div><span class="tariff-label">Базовый сбор</span><strong>100 ₽</strong></div>
-      <div><span class="tariff-label">Каждый начатый кг</span><strong>50 ₽</strong></div>
-      <div><span class="tariff-label">Каждые начатые 10 км</span><strong>10 ₽</strong></div>
+      <div><span class="tariff-label">Базовый сбор</span><strong>{{base}} ₽</strong></div>
+      <div><span class="tariff-label">Каждый начатый кг</span><strong>{{perKg}} ₽</strong></div>
+      <div><span class="tariff-label">Каждые начатые {{distanceBlockKm}} км</span><strong>{{perDistanceBlock}} ₽</strong></div>
     </section>
     <footer><span>ParcelQuote</span><p>Учебный калькулятор. Не является предложением реального перевозчика.</p></footer>
   </main>

@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import type { FastifyError, FastifyInstance } from 'fastify';
 import { calculateQuote } from './quote.ts';
 import type { QuoteInput } from './quote.ts';
+import tariffs from './tariffs.json' with { type: 'json' };
 
 const fieldMessages: Record<string, string> = {
   weightKg: 'Вес должен быть от 0,1 до 30 кг с точностью до 0,01 кг.',
@@ -16,9 +17,15 @@ const fieldMessages: Record<string, string> = {
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
-    ajv: { customOptions: {
-      coerceTypes: false, removeAdditional: false, allErrors: true, multipleOfPrecision: 8,
-    } },
+    ajv: {
+      customOptions: { coerceTypes: false, removeAdditional: false, allErrors: true },
+      plugins: [(ajv) => {
+        ajv.addFormat('hundredths', {
+          type: 'number', validate: (value: number) => value === Math.round(value * 100) / 100,
+        });
+        return ajv;
+      }],
+    },
   });
 
   app.setErrorHandler<FastifyError>((error, _request, reply) => {
@@ -56,7 +63,7 @@ export function buildApp(): FastifyInstance {
       type: 'object', additionalProperties: false,
       required: Object.keys(fieldMessages),
       properties: {
-        weightKg: { type: 'number', minimum: 0.1, maximum: 30, multipleOf: 0.01 },
+        weightKg: { type: 'number', minimum: 0.1, maximum: 30, format: 'hundredths' },
         lengthCm: { type: 'integer', minimum: 1, maximum: 100 },
         widthCm: { type: 'integer', minimum: 1, maximum: 100 },
         heightCm: { type: 'integer', minimum: 1, maximum: 100 },
@@ -72,8 +79,13 @@ export function buildApp(): FastifyInstance {
     ['/styles.css', 'styles.css', 'text/css; charset=utf-8'],
     ['/app.js', 'app.js', 'application/javascript; charset=utf-8'],
   ]) {
-    app.get(route, async (_request, reply) => reply.type(contentType)
-      .send(await readFile(new URL(`../public/${file}`, import.meta.url))));
+    app.get(route, async (_request, reply) => {
+      const content = await readFile(new URL(`../public/${file}`, import.meta.url));
+      const body = file === 'index.html' ? content.toString().replace(/\{\{(\w+)\}\}/g,
+        (_match, key: keyof typeof tariffs) => new Intl.NumberFormat('ru-RU')
+          .format(tariffs[key])) : content;
+      return reply.type(contentType).send(body);
+    });
   }
 
   return app;
