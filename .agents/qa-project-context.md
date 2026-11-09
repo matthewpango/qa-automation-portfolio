@@ -10,7 +10,7 @@ User chooses two of ten cities, enters weight/dimensions and selects delivery op
 The server resolves fictional distances; identical cities are rejected.
 Critical journeys: valid quote, option changes, invalid input, forbidden route,
 parameter changes while waiting, network failure and recovery, keyboard use.
-Requirements: README.md and docs/superpowers/specs/2026-11-09-intercity-routes.md.
+Requirements: docs/product-contract.md and docs/superpowers/specs/2026-11-09-intercity-routes.md.
 
 ## Tech Stack
 

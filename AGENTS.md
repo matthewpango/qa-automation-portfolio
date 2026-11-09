@@ -3,7 +3,7 @@
 ## Context and requirements
 
 Before changing tests, read `.agents/qa-project-context.md` and `CONTRIBUTING.md`.
-Use `README.md` for the product contract and `docs/qa-coverage-matrix.md` for
+Use `docs/product-contract.md` for the product contract and `docs/qa-coverage-matrix.md` for
 requirement coverage. When behavior or coverage changes, update the relevant
 documentation and matrix.
 

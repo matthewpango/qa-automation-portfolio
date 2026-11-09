@@ -31,7 +31,7 @@ Owner: автор портфолио, QA Automation Engineer.
 нагрузочное тестирование и формальная сертификация WCAG. Этих функций или
 согласованных требований в продукте нет. Расстояния учебные.
 
-Источники: [README](../README.md), [междугородние маршруты](superpowers/specs/2026-11-09-intercity-routes.md),
+Источники: [правила продукта и API](product-contract.md), [междугородние маршруты](superpowers/specs/2026-11-09-intercity-routes.md),
 `src/quote.ts`, `src/app.ts`, `src/routes.json`, `src/tariffs.json`,
 `Dockerfile`, `compose.yaml`, `tests/`, `playwright.config.ts`.
 При конфликте первоначального дизайна с новым решением о городах действует
