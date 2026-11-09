@@ -42,7 +42,7 @@ for (const scenario of [
   {
     name: 'Обычная доставка: 900 ₽ и полная разбивка цены и фактического веса',
     weight: '2', length: '10', width: '10', height: '10', delivery: 'Обычная', fragile: false,
-    multiplier: '1', total: '901 ₽',
+    multiplier: '1', total: '900 ₽',
     values: ['100 ₽', '100 ₽', '700 ₽', '900 ₽', '0 ₽', '0 ₽', '2 кг', '0,2 кг', '2 кг', '2 кг', '70'],
   },
   {
