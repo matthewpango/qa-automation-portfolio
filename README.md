@@ -32,6 +32,9 @@ TypeScript · Playwright · Node.js / Fastify · Docker Compose · Allure · Git
 [GitHub Actions](https://github.com/matthewpango/qa-automation-portfolio/actions/workflows/tests.yml) запускает проверки в Docker
 и сохраняет отчёты. [Первый полный запуск](https://github.com/matthewpango/qa-automation-portfolio/actions/runs/42540835392) прошёл успешно.
 
+Для `main` требуется успешный `tests` перед слиянием, включая администратора.
+Блокировка и разрешение слияния подтверждены в [контрольном PR №1](https://github.com/matthewpango/qa-automation-portfolio/pull/1).
+
 ## Запуск
 
 Нужен Docker с Linux-контейнерами и Docker Compose.
