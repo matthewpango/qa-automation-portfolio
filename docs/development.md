@@ -218,13 +218,16 @@ Workflow: `.github/workflows/tests.yml`, job `tests`.
 [Первый полный CI-прогон](https://github.com/matthewpango/qa-automation-portfolio/actions/runs/42540835392) прошёл успешно:
 проверены все шаги, включая загрузку артефакта и остановку окружения.
 Артефакт скачан; логи и отчёты Playwright/Allure проверены.
-Обязательный статус `tests` в правилах ветки пока не настроен и не проверен.
+Защита `main` проверена: требуется PR, успешный `tests` от GitHub Actions и
+актуальность ветки. Обход администратором отключён; одобрение другого человека
+не требуется. Подтверждение: [контрольный PR №1](https://github.com/matthewpango/qa-automation-portfolio/pull/1): [красный прогон](https://github.com/matthewpango/qa-automation-portfolio/actions/runs/42612670890) и [зелёный прогон](https://github.com/matthewpango/qa-automation-portfolio/actions/runs/42613004946).
 Workflow не развёртывает приложение в production.
 
 Контрольный набор: 6 unit, 2 внутренних интеграционных, 172 API и 27 UI,
 всего 207. Набор проверен в Linux-контейнере на Windows-хосте с Node.js 24 и Playwright 1.65.0.
 Отказной прогон отдельно подтвердил ненулевой exit code и наличие отчёта,
-trace и скриншота. Отказной прогон на GitHub пока не проверен.
+trace и скриншота. Отказной GitHub-прогон также подтверждён: артефакт скачан, Allure показывает
+один намеренный отказ, screenshot и trace доступны; cleanup завершился успешно.
 
 ## Структура
 
