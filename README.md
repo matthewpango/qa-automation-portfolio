@@ -1,5 +1,7 @@
 # ParcelQuote
 
+[![Tests](https://github.com/matthewpango/qa-automation-portfolio/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/matthewpango/qa-automation-portfolio/actions/workflows/tests.yml)
+
 Учебный проект для моего портфолио **QA Automation Engineer**.
 На примере небольшого сервиса демонстрирую тест-дизайн, автоматизацию API и UI,
 контейнерное окружение и отчётность.
@@ -27,7 +29,8 @@ TypeScript · Playwright · Node.js / Fastify · Docker Compose · Allure · Git
 | Unit и внутренние интеграционные, node:test | 8 |
 | **Всего** | **207** |
 
-Workflow GitHub Actions подготовлен; реальный запуск на GitHub пока не подтверждён.
+[GitHub Actions](https://github.com/matthewpango/qa-automation-portfolio/actions/workflows/tests.yml) запускает проверки в Docker
+и сохраняет отчёты. [Первый полный запуск](https://github.com/matthewpango/qa-automation-portfolio/actions/runs/42540835392) прошёл успешно.
 
 ## Запуск
 
