@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { reportScenario } from './report.ts';
 
+// Контрольная ветка для проверки обязательного CI; этот PR не сливается.
+
 async function fillParcel(page: Page) {
   await test.step('Заполнить посылку: 2 кг, 10 × 10 × 10 см, Москва → Санкт-Петербург', async () => {
     await page.getByLabel('Вес, кг', { exact: true }).fill('2');
@@ -40,7 +42,7 @@ for (const scenario of [
   {
     name: 'Обычная доставка: 900 ₽ и полная разбивка цены и фактического веса',
     weight: '2', length: '10', width: '10', height: '10', delivery: 'Обычная', fragile: false,
-    multiplier: '1', total: '900 ₽',
+    multiplier: '1', total: '901 ₽',
     values: ['100 ₽', '100 ₽', '700 ₽', '900 ₽', '0 ₽', '0 ₽', '2 кг', '0,2 кг', '2 кг', '2 кг', '70'],
   },
   {
